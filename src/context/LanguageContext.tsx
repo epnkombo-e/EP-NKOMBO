@@ -5,6 +5,7 @@ import {
   type LanguageCode,
   type UIStrings,
 } from '../i18n/translations';
+import { PORTAL_EXTRAS, type PortalExtrasStrings } from '../i18n/portalStrings';
 
 const STORAGE_KEY = 'epn_language';
 
@@ -12,6 +13,7 @@ interface LanguageContextValue {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
   t: UIStrings;
+  portal: PortalExtrasStrings;
   localizeCategory: (category: string) => string;
 }
 
@@ -46,6 +48,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const t = UI_TRANSLATIONS[language];
+  const portal = PORTAL_EXTRAS[language];
 
   const localizeCategory = useMemo(() => {
     return (category: string): string => {
@@ -74,6 +77,16 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
           return t.testimonials.parentLabel;
         case 'Student':
           return t.testimonials.studentLabel;
+        case 'Forms & Admissions':
+          return t.files.catForms;
+        case 'Curriculum & Booklists':
+          return t.files.catCurriculum;
+        case 'Circulars & Notices':
+          return t.files.catCirculars;
+        case 'Reports & Policies':
+          return t.files.catReports;
+        case 'Media & Resources':
+          return t.files.catMedia;
         default:
           return category;
       }
@@ -85,9 +98,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       language,
       setLanguage,
       t,
+      portal,
       localizeCategory,
     }),
-    [language, t, localizeCategory],
+    [language, t, portal, localizeCategory],
   );
 
   return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;

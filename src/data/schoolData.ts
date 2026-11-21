@@ -1,3 +1,5 @@
+import { utf8ToBase64DataUrl } from '../lib/fileUtils';
+
 export interface SchoolSettings {
   schoolName: string;
   tagline: string;
@@ -8,10 +10,15 @@ export interface SchoolSettings {
   languages: string;
   schoolHours: string;
   contactEmail: string;
+  phoneNumber: string;
   campusAddress: string;
   officeHours: string;
   historyNote: string;
   plePassRate: string;
+  heroBgMode?: 'default' | 'campus_courtyard' | 'science_garden' | 'library' | 'sports_pitch' | 'lake_sunset' | 'custom';
+  heroBgImage?: string;
+  heroBgOverlay?: number;
+  aiLessonTrainerNotes?: string;
 }
 
 export type PostCategory = 'Announcements' | 'Academics' | 'Community & Events' | 'Achievements';
@@ -27,6 +34,9 @@ export interface SchoolPost {
   published: boolean;
   pinned: boolean;
   imageUrl?: string;
+  videoUrl?: string;
+  approvalStatus?: 'approved' | 'pending' | 'rejected';
+  submittedByUid?: string;
   createdAtMs: number;
   displayDate: string;
 }
@@ -134,6 +144,52 @@ export interface SchoolTestimonial {
   displayDate: string;
 }
 
+export type SchoolFileCategory =
+  | 'Forms & Admissions'
+  | 'Curriculum & Booklists'
+  | 'Circulars & Notices'
+  | 'Reports & Policies'
+  | 'Media & Resources';
+
+export type SchoolFileSourceType = 'upload' | 'url' | 'generated';
+
+export interface SchoolFileRecord {
+  id: string;
+  title: string;
+  category: SchoolFileCategory;
+  description: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sourceType: SchoolFileSourceType;
+  fileUrl?: string;
+  fileData?: string;
+  uploadedBy: string;
+  published: boolean;
+  createdAtMs: number;
+  displayDate: string;
+}
+
+export interface ExamSubmissionRecord {
+  id: string;
+  referenceCode: string;
+  examTitle: string;
+  district: string;
+  sector: string;
+  schoolName: string;
+  studentName: string;
+  className: string;
+  candidateNumber?: string;
+  examDate: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  unansweredCount: number;
+  elapsedSeconds: number;
+  createdAtMs: number;
+  createdAtLabel: string;
+}
+
 export const PRIMARY_OWNER_EMAIL = 'epnkombo@gmail.com';
 
 export const SCHOOL_IMAGES = {
@@ -154,19 +210,25 @@ export const BUILTIN_IMAGE_OPTIONS = [
 
 export const DEFAULT_SCHOOL_SETTINGS: SchoolSettings = {
   schoolName: 'EP Saint Pierre Nkombo',
-  tagline: 'École Primaire Saint Pierre Nkombo · Lake Kivu, Rwanda',
-  locationLabel: 'Nkombo Island, Rusizi District',
-  heroTitle: 'Rooted on Nkombo Island, nurturing curious minds for tomorrow.',
+  tagline: 'Learning today, leading tomorrow · Bugarura Cell, Nkombo Sector',
+  locationLabel: 'Bugarura Cell · Nkombo Sector · Rusizi',
+  heroTitle: 'Learning today, leading tomorrow on Nkombo Island.',
   heroSubtitle:
-    'EP Saint Pierre Nkombo provides Nursery and Primary 1–6 education grounded in multilingual literacy, hands-on lakeside environmental science, and strong community stewardship in Rusizi District.',
+    'EP Saint Pierre Nkombo provides Nursery and Primary 1–6 education grounded in multilingual literacy, hands-on lakeside environmental science, digital & P6 exam readiness, and community partnership in Bugarura Cell, Rusizi District.',
   gradesServed: 'Nursery & Primary 1–6',
   languages: 'Kinyarwanda, English & French',
   schoolHours: 'Mon–Fri · 07:30 – 15:30',
   contactEmail: 'epnkombo@gmail.com',
-  campusAddress: 'Nkombo Sector, Rusizi District, Western Province, Rwanda',
+  phoneNumber: '078 200 6911',
+  campusAddress: 'Bugarura Cell, Nkombo Sector, Rusizi District, Western Province, Rwanda',
   officeHours: 'Monday – Friday, 07:30 – 16:00',
-  historyNote: 'Nkombo Sector · Rusizi District · Western Province · Serving Island Families Since 1964',
+  historyNote: 'Bugarura Cell · Nkombo Sector · Rusizi District · Serving Island Families Since 1964',
   plePassRate: '98.4%',
+  heroBgMode: 'default',
+  heroBgImage: '',
+  heroBgOverlay: 60,
+  aiLessonTrainerNotes:
+    'Follow Rwanda REB Competence-Based Curriculum (CBC). Use Lake Kivu & Nkombo Island examples, cooperative pair/group discovery, Kinyarwanda-English-French key terms, and 3-5 formative assessment questions.',
 };
 
 export const DEFAULT_POSTS: SchoolPost[] = [
@@ -674,4 +736,160 @@ export const DAILY_SCHEDULE: DailyScheduleRow[] = [
   { id: 'ds5', order: 5, time: '12:30 – 13:30', activity: 'Midday Lunch & Rest', notes: 'School dining pavilion' },
   { id: 'ds6', order: 6, time: '13:30 – 14:30', activity: 'Science, Garden Practicum & Social Studies', notes: 'Hillside beds & reading room' },
   { id: 'ds7', order: 7, time: '14:30 – 15:30', activity: 'Co-Curricular Clubs & Dismissal', notes: 'Choir, football, peer reading' },
+];
+
+const ADMISSIONS_FORM_TEXT = `EP SAINT PIERRE NKOMBO
+Nkombo Sector · Rusizi District · Western Province, Rwanda
+Email: epnkombo@gmail.com
+
+NURSERY & PRIMARY 1–6 STUDENT ADMISSIONS REGISTRATION FORM (2026–2027)
+=======================================================================
+
+1. PUPIL INFORMATION
+   - Full Name: _________________________________________________
+   - Date of Birth (DD/MM/YYYY): ________________________________
+   - Gender: [ ] Female   [ ] Male
+   - Applying For Level: [ ] Nursery (N1–N3)   [ ] Lower Primary (P1–P3)   [ ] Upper Primary (P4–P6)
+   - Previous School (if transferring): _________________________
+
+2. PARENT / GUARDIAN CONTACT DETAILS
+   - Parent / Guardian Full Name: _______________________________
+   - Cell / Village (Umudugudu): ________________________________
+   - Phone Number (MTN / Airtel): _______________________________
+   - Email Address (optional): __________________________________
+
+3. DOCUMENTS TO BRING TO THE HEAD TEACHER'S OFFICE
+   [ ] Child's birth certificate or sector civil extract
+   [ ] Previous school report card (for P2–P6 transfers)
+   [ ] Two recent passport photographs
+   [ ] Mutuelle de Santé / immunization card copy
+
+4. DECLARATION
+   I confirm the information above is accurate and request placement assessment at EP Saint Pierre Nkombo.
+
+   Parent/Guardian Signature: __________________  Date: ___________
+`;
+
+const BOOKLIST_GUIDE_TEXT = `EP SAINT PIERRE NKOMBO — TRILINGUAL BOOKLIST & SCHOOL SUPPLIES (2026–2027)
+==========================================================================
+
+NURSERY (N1–N3)
+- 2 large-format drawing & pattern exercise books
+- 1 packet colored crayons, 2 jumbo HB pencils, soft eraser
+- Illustrated Kinyarwanda & English picture reader (supplied in class circle)
+- Reusable cup & water bottle labeled with pupil name
+
+LOWER PRIMARY (P1–P3)
+- 6 ruled 96-page exercise books + 2 squared mathematics books
+- Kinyarwanda Phonics Workbook & Story Primer
+- Bilingual English/French Picture Vocabulary Notebook
+- Blue/black ballpoint pens (P3), HB pencils, 30cm wooden ruler
+
+UPPER PRIMARY (P4–P6)
+- 10 A4 exercise books (Mathematics, SET, English, French, Kinyarwanda, Social Studies)
+- Geometry set (compass, protractor, set squares)
+- Science Garden Observation Logbook (maintained for P4–P6 Agroecology labs)
+- Oxford Primary English & French Pocket Dictionaries (available in Reading Room)
+`;
+
+const PARENT_CIRCULAR_TEXT = `EP SAINT PIERRE NKOMBO — PARENT-TEACHER ACADEMIC REVIEW CIRCULAR
+==================================================================
+Date: Term I Review · Rusizi District, Nkombo Island
+
+Dear Parents and Guardians,
+
+Thank you for walking closely with our teachers throughout this academic term.
+Please note the following campus reminders:
+
+1. TERM I PARENT-TEACHER CONFERENCES
+   - Date: Friday, 04 December 2026 · 08:30 – 12:00
+   - Location: Main Courtyard & Assigned Classrooms
+   - Teachers will share individual Kinyarwanda, English & French reading portfolios.
+
+2. DAILY ATTENDANCE & PUNCTUALITY
+   - Morning assembly begins promptly at 07:30 in the stone courtyard.
+   - Afternoon clubs (Choir, Football, Lake Kivu Garden Club, Reading Ambassadors) run 14:30 – 15:30.
+
+3. CONTACTING THE SCHOOL OFFICE
+   - Email: epnkombo@gmail.com
+   - Office Hours: Monday – Friday, 07:30 – 16:00
+
+Warm regards,
+Jean Bosco Habimana — Head Teacher
+EP Saint Pierre Nkombo
+`;
+
+const CALENDAR_CSV_TEXT = `Date,Time,Category,Event Title,Location
+2026-12-04,08:30 - 12:00,Parent Meetings,Term I Parent-Teacher Academic Review,Main Courtyard & Classrooms
+2026-12-11,14:00 - 16:30,Athletics & Clubs,Nkombo Lakeside Youth Football & Choir Showcase,Lakeside Pitch & Courtyard
+2027-01-12,07:30 - 15:30,Academic Dates,Term II Opening Assembly & Orientation,School Flagpole Courtyard
+2027-01-22,09:00 - 11:30,Parent Meetings,Admissions Open Morning & Campus Tour,Administration Office & Reading Room
+2027-02-06,10:00 - 13:00,Academic Dates,Bilingual Literacy & Science Fair Day,Reading Room & Hillside Garden
+`;
+
+export const DEFAULT_SCHOOL_FILES: SchoolFileRecord[] = [
+  {
+    id: 'file-admissions-registration-form',
+    title: 'Nursery & Primary (P1–P6) Admissions Registration Form',
+    category: 'Forms & Admissions',
+    description:
+      'Printable registration checklist and family intake form for new Nursery and Primary 1–6 pupils joining EP Saint Pierre Nkombo.',
+    fileName: 'EP-Saint-Pierre-Nkombo-Admissions-Form-2026.txt',
+    mimeType: 'text/plain',
+    sizeBytes: ADMISSIONS_FORM_TEXT.length,
+    sourceType: 'generated',
+    fileData: utf8ToBase64DataUrl('text/plain', ADMISSIONS_FORM_TEXT),
+    uploadedBy: PRIMARY_OWNER_EMAIL,
+    published: true,
+    createdAtMs: 1795210000000,
+    displayDate: '21 Nov 2026',
+  },
+  {
+    id: 'file-trilingual-booklist-guide',
+    title: '2026–2027 Trilingual Booklist & Pupil Supplies Guide',
+    category: 'Curriculum & Booklists',
+    description:
+      'Required exercise books, Kinyarwanda/English/French primers, and Hillside Science Garden logs for Nursery, P1–P3, and P4–P6.',
+    fileName: 'EP-Saint-Pierre-Nkombo-Booklist-2026-2027.txt',
+    mimeType: 'text/plain',
+    sizeBytes: BOOKLIST_GUIDE_TEXT.length,
+    sourceType: 'generated',
+    fileData: utf8ToBase64DataUrl('text/plain', BOOKLIST_GUIDE_TEXT),
+    uploadedBy: PRIMARY_OWNER_EMAIL,
+    published: true,
+    createdAtMs: 1795100000000,
+    displayDate: '18 Nov 2026',
+  },
+  {
+    id: 'file-term-review-circular',
+    title: 'Term I Parent-Teacher Academic Review Circular',
+    category: 'Circulars & Notices',
+    description:
+      'Official Head Teacher circular covering December conference hours, morning assembly timings, and Reading Room portfolio reviews.',
+    fileName: 'EP-Saint-Pierre-Nkombo-Term-I-Circular.txt',
+    mimeType: 'text/plain',
+    sizeBytes: PARENT_CIRCULAR_TEXT.length,
+    sourceType: 'generated',
+    fileData: utf8ToBase64DataUrl('text/plain', PARENT_CIRCULAR_TEXT),
+    uploadedBy: PRIMARY_OWNER_EMAIL,
+    published: true,
+    createdAtMs: 1794950000000,
+    displayDate: '15 Nov 2026',
+  },
+  {
+    id: 'file-academic-calendar-csv',
+    title: '2026–2027 Academic Term Calendar & Key Dates (CSV)',
+    category: 'Reports & Policies',
+    description:
+      'Spreadsheet-ready schedule of Term I & II parent conferences, sports fixtures, opening assembly, and Science Fair dates.',
+    fileName: 'EP-Saint-Pierre-Nkombo-Calendar-2026-2027.csv',
+    mimeType: 'text/csv',
+    sizeBytes: CALENDAR_CSV_TEXT.length,
+    sourceType: 'generated',
+    fileData: utf8ToBase64DataUrl('text/csv', CALENDAR_CSV_TEXT),
+    uploadedBy: PRIMARY_OWNER_EMAIL,
+    published: true,
+    createdAtMs: 1794700000000,
+    displayDate: '10 Nov 2026',
+  },
 ];

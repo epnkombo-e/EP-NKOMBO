@@ -3,17 +3,42 @@ import {
   AlertCircle,
   CheckCircle2,
   Database,
+  Download,
+  ExternalLink,
+  FileText,
+  Film,
+  GraduationCap,
+  Image as ImageIcon,
   LogOut,
   Pencil,
   Plus,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import {
   useSchoolData,
   type NewPostPayload,
+  type NewSchoolFilePayload,
   type NewTestimonialPayload,
 } from '../context/SchoolDataContext';
+import { usePortalFeatures } from '../context/PortalFeaturesContext';
+import {
+  OwnerApprovalsPanel,
+  OwnerBackgroundPanel,
+  OwnerRosterPanel,
+} from './OwnerStudioNewTabs';
+import { isSafeMediaUrl, parseVideoSource } from '../lib/videoEmbed';
+import {
+  MAX_DIRECT_FILE_BYTES,
+  MAX_ENCODED_DATA_LENGTH,
+  compressImageToDataUrl,
+  formatFileSize,
+  getFileExtensionLabel,
+  isSafeHttpUrl,
+  readFileAsDataUrl,
+  triggerSchoolFileDownload,
+} from '../lib/fileUtils';
 import {
   BUILTIN_IMAGE_OPTIONS,
   PRIMARY_OWNER_EMAIL,
@@ -24,6 +49,8 @@ import {
   type DailyScheduleRow,
   type FacultyMember,
   type PostCategory,
+  type SchoolFileCategory,
+  type SchoolFileRecord,
   type SchoolPost,
   type SchoolSettings,
   type SchoolTestimonial,
@@ -32,7 +59,12 @@ import {
 
 export type StudioTab =
   | 'posts'
+  | 'approvals'
+  | 'roster'
+  | 'background'
   | 'testimonials'
+  | 'files'
+  | 'exams'
   | 'profile'
   | 'academics'
   | 'campus'
@@ -49,7 +81,12 @@ interface OwnerStudioModalProps {
 
 const TABS: { id: StudioTab; label: string }[] = [
   { id: 'posts', label: 'Posts & News' },
+  { id: 'approvals', label: 'Teacher Approvals' },
+  { id: 'roster', label: 'Roster & Marks' },
+  { id: 'background', label: 'Background & AI' },
   { id: 'testimonials', label: 'Testimonials' },
+  { id: 'files', label: 'Files & Downloads' },
+  { id: 'exams', label: 'Exam Results' },
   { id: 'profile', label: 'School Profile' },
   { id: 'academics', label: 'Academics' },
   { id: 'campus', label: 'Campus Spaces' },
@@ -71,9 +108,11 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
     campusSpaces,
     faculty,
     testimonials,
+    schoolFiles,
     calendarEvents,
     dailySchedule,
     inquiries,
+    examSubmissions,
     adminEmails,
     hasSyncedFromDb,
     saveSchoolSettings,
@@ -86,16 +125,25 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
     deleteFacultyMember,
     saveTestimonial,
     deleteTestimonial,
+    saveSchoolFile,
+    deleteSchoolFile,
     saveCalendarEvent,
     deleteCalendarEvent,
     saveDailyScheduleSlot,
     deleteDailyScheduleSlot,
     updateInquiryStatus,
     deleteInquiry,
+    deleteExamSubmission,
     addCoAdminEmail,
     removeCoAdminEmail,
     seedAllDefaultsToFirestore,
   } = useSchoolData();
+  const { libraryItems, sportsItems } = usePortalFeatures();
+
+  const pendingApprovalsCount =
+    posts.filter((p) => p.approvalStatus === 'pending').length +
+    libraryItems.filter((l) => l.approvalStatus === 'pending').length +
+    sportsItems.filter((s) => s.approvalStatus === 'pending').length;
 
   const [tab, setTab] = useState<StudioTab>(initialTab);
   const [banner, setBanner] = useState<{ type: 'ok' | 'err'; text: string } | null>(null);
@@ -136,6 +184,7 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
     published: true,
     pinned: false,
     imageUrl: BUILTIN_IMAGE_OPTIONS[0].url,
+    videoUrl: '',
   });
 
   const resetPostForm = () => {
@@ -149,6 +198,7 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
       published: true,
       pinned: false,
       imageUrl: BUILTIN_IMAGE_OPTIONS[0].url,
+      videoUrl: '',
     });
   };
 
@@ -163,7 +213,22 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
       published: p.published,
       pinned: p.pinned,
       imageUrl: p.imageUrl || '',
+      videoUrl: p.videoUrl || '',
     });
+  };
+
+  const handlePostPhotoUpload = async (file?: File | null) => {
+    if (!file) return;
+    setSaving(true);
+    try {
+      const compressed = await compressImageToDataUrl(file);
+      setPostForm((prev) => ({ ...prev, imageUrl: compressed }));
+      notifyOk(`Uploaded and optimized photo "${file.name}". Click Publish/Update Post to save.`);
+    } catch (err) {
+      notifyErr(err);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleSavePost = async (e: FormEvent) => {
@@ -172,6 +237,13 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
       setBanner({
         type: 'err',
         text: 'Post requires a title (3+ chars), summary (10+ chars), and body (10+ chars).',
+      });
+      return;
+    }
+    if (postForm.imageUrl?.trim() && !isSafeMediaUrl(postForm.imageUrl)) {
+      setBanner({
+        type: 'err',
+        text: 'Enter a valid https:// image URL, choose a campus photo, or upload an image file.',
       });
       return;
     }
@@ -244,10 +316,28 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
     featured: false,
   });
 
+  const handleSpacePhotoUpload = async (file?: File | null) => {
+    if (!file) return;
+    setSaving(true);
+    try {
+      const compressed = await compressImageToDataUrl(file);
+      setSpaceForm((prev) => ({ ...prev, image: compressed }));
+      notifyOk(`Uploaded and optimized campus photo "${file.name}".`);
+    } catch (err) {
+      notifyErr(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveSpace = async (e: FormEvent) => {
     e.preventDefault();
     if (spaceForm.title.trim().length < 3 || spaceForm.description.trim().length < 10) {
       setBanner({ type: 'err', text: 'Space title (3+ chars) and description (10+ chars) required.' });
+      return;
+    }
+    if (!isSafeMediaUrl(spaceForm.image)) {
+      setBanner({ type: 'err', text: 'Provide a valid photo URL, preset, or upload an image.' });
       return;
     }
     setSaving(true);
@@ -390,6 +480,166 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
           : 'New testimonial added to Parent & Student Testimonials.',
       );
       resetTestimonialForm();
+    } catch (err) {
+      notifyErr(err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // 5C. SCHOOL FILES & DOWNLOADS FORM STATE
+  const [editingFileId, setEditingFileId] = useState<string | null>(null);
+  const [fileInputMode, setFileInputMode] = useState<'upload' | 'url'>('upload');
+  const [fileForm, setFileForm] = useState<NewSchoolFilePayload>({
+    title: '',
+    category: 'Forms & Admissions',
+    description: '',
+    fileName: '',
+    mimeType: 'application/pdf',
+    sizeBytes: 0,
+    sourceType: 'upload',
+    fileUrl: '',
+    fileData: '',
+    published: true,
+  });
+
+  const resetFileForm = () => {
+    setEditingFileId(null);
+    setFileInputMode('upload');
+    setFileForm({
+      title: '',
+      category: 'Forms & Admissions',
+      description: '',
+      fileName: '',
+      mimeType: 'application/pdf',
+      sizeBytes: 0,
+      sourceType: 'upload',
+      fileUrl: '',
+      fileData: '',
+      published: true,
+    });
+  };
+
+  const loadFileForEdit = (f: SchoolFileRecord) => {
+    setEditingFileId(f.id);
+    setFileInputMode(f.sourceType === 'url' && !f.fileData ? 'url' : 'upload');
+    setFileForm({
+      title: f.title,
+      category: f.category,
+      description: f.description,
+      fileName: f.fileName,
+      mimeType: f.mimeType,
+      sizeBytes: f.sizeBytes,
+      sourceType: f.sourceType,
+      fileUrl: f.fileUrl || '',
+      fileData: f.fileData || '',
+      published: f.published,
+    });
+  };
+
+  const handlePickSchoolFile = async (file?: File | null) => {
+    if (!file) return;
+    setBanner(null);
+
+    try {
+      let dataUri = '';
+      let finalMime = file.type || 'application/octet-stream';
+      let finalSize = file.size;
+
+      if (file.type.startsWith('image/') && file.size > MAX_DIRECT_FILE_BYTES) {
+        dataUri = await compressImageToDataUrl(file, 1600, MAX_ENCODED_DATA_LENGTH - 5000);
+        finalMime = 'image/jpeg';
+        finalSize = Math.round((dataUri.length * 3) / 4);
+      } else {
+        if (file.size > MAX_DIRECT_FILE_BYTES) {
+          setBanner({
+            type: 'err',
+            text: `"${file.name}" is ${formatFileSize(file.size)}. Direct uploads support up to 500 KB. Switch to "External File Link" for larger PDFs or videos.`,
+          });
+          return;
+        }
+        dataUri = await readFileAsDataUrl(file);
+      }
+
+      if (dataUri.length > MAX_ENCODED_DATA_LENGTH) {
+        setBanner({
+          type: 'err',
+          text: `"${file.name}" is too large after encoding. Please use External File Link for large files.`,
+        });
+        return;
+      }
+
+      const suggestedTitle = file.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim();
+      setFileForm((prev) => ({
+        ...prev,
+        title: prev.title.trim() ? prev.title : suggestedTitle.slice(0, 140),
+        fileName: file.name.slice(0, 180),
+        mimeType: finalMime.slice(0, 120),
+        sizeBytes: finalSize,
+        sourceType: 'upload',
+        fileData: dataUri,
+        fileUrl: '',
+      }));
+      notifyOk(`Attached "${file.name}" (${formatFileSize(finalSize)}). Add a short description and click Save & Publish File.`);
+    } catch (err) {
+      notifyErr(err);
+    }
+  };
+
+  const handleSaveSchoolFile = async (e: FormEvent) => {
+    e.preventDefault();
+    if (fileForm.title.trim().length < 2 || fileForm.description.trim().length < 5) {
+      setBanner({
+        type: 'err',
+        text: 'Document requires a title (2+ chars) and description (5+ chars).',
+      });
+      return;
+    }
+
+    if (fileInputMode === 'upload') {
+      if (!fileForm.fileData?.trim()) {
+        setBanner({
+          type: 'err',
+          text: 'Select a file from your computer or phone first, or switch to External File Link.',
+        });
+        return;
+      }
+    } else {
+      if (!isSafeHttpUrl(fileForm.fileUrl)) {
+        setBanner({
+          type: 'err',
+          text: 'Enter a valid https:// or http:// external file link.',
+        });
+        return;
+      }
+    }
+
+    const payload: NewSchoolFilePayload =
+      fileInputMode === 'url'
+        ? {
+            ...fileForm,
+            sourceType: 'url',
+            fileUrl: fileForm.fileUrl?.trim(),
+            fileData: '',
+            fileName: fileForm.fileName.trim() || `${fileForm.title.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-')}.link`,
+            mimeType: fileForm.mimeType.trim() || 'text/uri-list',
+            sizeBytes: Math.max(0, Math.round(fileForm.sizeBytes || 0)),
+          }
+        : {
+            ...fileForm,
+            sourceType: fileForm.sourceType === 'generated' ? 'generated' : 'upload',
+            fileUrl: '',
+          };
+
+    setSaving(true);
+    try {
+      await saveSchoolFile(payload, editingFileId ?? undefined);
+      notifyOk(
+        editingFileId
+          ? 'School document updated.'
+          : 'File uploaded and published to School Documents & Downloads.',
+      );
+      resetFileForm();
     } catch (err) {
       notifyErr(err);
     } finally {
@@ -593,6 +843,11 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
                   }`}
                 >
                   {t.label}
+                  {t.id === 'approvals' && pendingApprovalsCount > 0 && (
+                    <span className="ml-1.5 rounded bg-[#F2B544] px-1.5 py-0.5 font-mono text-[10px] font-bold text-[#0B2E50]">
+                      {pendingApprovalsCount}
+                    </span>
+                  )}
                   {t.id === 'inquiries' && inquiries.filter((i) => i.status === 'new').length > 0 && (
                     <span className="ml-1.5 font-mono text-[11px] text-[#14532D]">
                       ({inquiries.filter((i) => i.status === 'new').length})
@@ -728,22 +983,125 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1917]">
-                    Post Cover Photo
-                  </label>
+                <div className="space-y-2 rounded-lg border border-[#E5DFD3] bg-[#FBF9F5] p-3.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-[#1C1917]">
+                      <ImageIcon className="h-3.5 w-3.5 text-[#14532D]" aria-hidden="true" />
+                      <span>Photo (Upload from Device, Preset, or URL)</span>
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <label className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#14532D] bg-[#FFFFFF] px-2.5 text-[11px] font-medium text-[#14532D] hover:bg-[#F3EFE7] cursor-pointer">
+                        <Upload className="h-3 w-3" aria-hidden="true" />
+                        <span>Upload Photo</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = '';
+                            void handlePostPhotoUpload(f);
+                          }}
+                        />
+                      </label>
+                      {postForm.imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setPostForm({ ...postForm, imageUrl: '' })}
+                          className="text-[11px] font-medium text-[#57534E] underline cursor-pointer"
+                        >
+                          Clear photo
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   <select
-                    value={postForm.imageUrl || ''}
+                    aria-label="Choose built-in school photo"
+                    value={
+                      BUILTIN_IMAGE_OPTIONS.some((o) => o.url === postForm.imageUrl)
+                        ? postForm.imageUrl
+                        : ''
+                    }
                     onChange={(e) => setPostForm({ ...postForm, imageUrl: e.target.value })}
-                    className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm"
+                    className="h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FFFFFF] px-3 text-sm"
                   >
-                    <option value="">No cover photo</option>
+                    <option value="">
+                      {postForm.imageUrl?.startsWith('data:image/')
+                        ? 'Uploaded photo from device attached'
+                        : postForm.imageUrl
+                          ? 'Using custom photo URL below'
+                          : 'No cover photo'}
+                    </option>
                     {BUILTIN_IMAGE_OPTIONS.map((opt) => (
                       <option key={opt.url} value={opt.url}>
                         {opt.label}
                       </option>
                     ))}
                   </select>
+
+                  {postForm.imageUrl?.startsWith('data:image/') ? (
+                    <p className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-xs text-[#14532D]">
+                      Photo uploaded from device ({formatFileSize(Math.round((postForm.imageUrl.length * 3) / 4))}).
+                    </p>
+                  ) : (
+                    <input
+                      type="text"
+                      maxLength={250000}
+                      value={postForm.imageUrl || ''}
+                      onChange={(e) => setPostForm({ ...postForm, imageUrl: e.target.value })}
+                      placeholder="Or paste custom photo link: https://..."
+                      className="h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FFFFFF] px-3 text-sm"
+                    />
+                  )}
+
+                  {postForm.imageUrl && isSafeMediaUrl(postForm.imageUrl) && (
+                    <div className="aspect-[16/9] w-full max-w-xs overflow-hidden rounded-md border border-[#E5DFD3] bg-[#F3EFE7]">
+                      <img
+                        src={postForm.imageUrl}
+                        alt="Post cover preview"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5 rounded-lg border border-[#E5DFD3] bg-[#FBF9F5] p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-[#1C1917]">
+                      <Film className="h-3.5 w-3.5 text-[#14532D]" aria-hidden="true" />
+                      <span>Video Link (Optional — YouTube, Vimeo, or MP4)</span>
+                    </label>
+                    {postForm.videoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setPostForm({ ...postForm, videoUrl: '' })}
+                        className="text-[11px] font-medium text-[#57534E] underline cursor-pointer"
+                      >
+                        Clear video
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="url"
+                    maxLength={500}
+                    value={postForm.videoUrl || ''}
+                    onChange={(e) => setPostForm({ ...postForm, videoUrl: e.target.value })}
+                    placeholder="https://www.youtube.com/watch?v=... or https://.../video.mp4"
+                    className="h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FFFFFF] px-3 text-sm"
+                  />
+                  {postForm.videoUrl && (
+                    <p className="text-[11px] text-[#57534E]">
+                      {parseVideoSource(postForm.videoUrl)?.kind === 'iframe'
+                        ? `Ready to embed (${parseVideoSource(postForm.videoUrl)?.kind === 'iframe' ? (parseVideoSource(postForm.videoUrl) as { provider: string }).provider : ''})`
+                        : parseVideoSource(postForm.videoUrl)?.kind === 'video'
+                          ? 'Ready to play HTML5 video'
+                          : parseVideoSource(postForm.videoUrl)?.kind === 'link'
+                            ? 'Will appear as a video link inside the post'
+                            : 'Enter a valid https:// YouTube, Vimeo, or .mp4 URL'}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-6 pt-1">
@@ -793,6 +1151,8 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
                         <span> · </span>
                         <span>{p.published ? 'Published' : 'Draft'}</span>
                         {p.pinned && <span> · Pinned</span>}
+                        {p.imageUrl && <span> · Photo</span>}
+                        {p.videoUrl && <span> · Video</span>}
                         <span> · </span>
                         <span>{p.displayDate}</span>
                       </p>
@@ -864,7 +1224,21 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
                     className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm"
                   />
                 </div>
-                <div className="sm:col-span-2">
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1917]">
+                    School Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={profileForm.phoneNumber}
+                    onChange={(e) =>
+                      setProfileForm({ ...profileForm, phoneNumber: e.target.value })
+                    }
+                    placeholder="e.g. 078 200 6911"
+                    className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm"
+                  />
+                </div>
+                <div>
                   <label className="block text-xs font-semibold text-[#1C1917]">
                     Hero Kicker / Tagline
                   </label>
@@ -1170,19 +1544,80 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
                     className="mt-1 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] p-3 text-sm"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-[#1C1917]">Photo</label>
+                <div className="space-y-2 rounded-lg border border-[#E5DFD3] bg-[#FBF9F5] p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="block text-xs font-semibold text-[#1C1917]">
+                      Campus Space Photo (Upload, Preset, or URL)
+                    </label>
+                    <label className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#14532D] bg-[#FFFFFF] px-2.5 text-[11px] font-medium text-[#14532D] hover:bg-[#F3EFE7] cursor-pointer">
+                      <Upload className="h-3 w-3" aria-hidden="true" />
+                      <span>Upload Photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          void handleSpacePhotoUpload(f);
+                        }}
+                      />
+                    </label>
+                  </div>
                   <select
-                    value={spaceForm.image}
-                    onChange={(e) => setSpaceForm({ ...spaceForm, image: e.target.value })}
-                    className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm"
+                    value={
+                      BUILTIN_IMAGE_OPTIONS.some((o) => o.url === spaceForm.image)
+                        ? spaceForm.image
+                        : ''
+                    }
+                    onChange={(e) => {
+                      if (e.target.value) setSpaceForm({ ...spaceForm, image: e.target.value });
+                    }}
+                    className="h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FFFFFF] px-3 text-sm"
                   >
+                    <option value="">
+                      {spaceForm.image?.startsWith('data:image/')
+                        ? 'Uploaded photo from device attached'
+                        : 'Using custom photo URL below'}
+                    </option>
                     {BUILTIN_IMAGE_OPTIONS.map((opt) => (
                       <option key={opt.url} value={opt.url}>
                         {opt.label}
                       </option>
                     ))}
                   </select>
+                  {spaceForm.image?.startsWith('data:image/') ? (
+                    <div className="flex items-center justify-between gap-2 rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-xs text-[#14532D]">
+                      <span>Photo uploaded from device ({formatFileSize(Math.round((spaceForm.image.length * 3) / 4))}).</span>
+                      <button
+                        type="button"
+                        onClick={() => setSpaceForm({ ...spaceForm, image: BUILTIN_IMAGE_OPTIONS[0].url })}
+                        className="underline cursor-pointer"
+                      >
+                        Reset preset
+                      </button>
+                    </div>
+                  ) : (
+                    <input
+                      type="text"
+                      required
+                      maxLength={250000}
+                      value={spaceForm.image}
+                      onChange={(e) => setSpaceForm({ ...spaceForm, image: e.target.value })}
+                      placeholder="https://..."
+                      className="h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FFFFFF] px-3 text-sm"
+                    />
+                  )}
+                  {spaceForm.image && isSafeMediaUrl(spaceForm.image) && (
+                    <div className="aspect-[16/9] w-full max-w-xs overflow-hidden rounded-md border border-[#E5DFD3] bg-[#F3EFE7]">
+                      <img
+                        src={spaceForm.image}
+                        alt="Campus space preview"
+                        referrerPolicy="no-referrer"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
                 <button
                   type="submit"
@@ -1638,6 +2073,291 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
             </div>
           )}
 
+          {/* TAB 1C: FILES & DOWNLOADS */}
+          {tab === 'files' && (
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+              <form
+                onSubmit={handleSaveSchoolFile}
+                className="space-y-4 rounded-xl border border-[#E5DFD3] bg-[#FFFFFF] p-5 lg:col-span-5"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-display text-lg font-medium text-[#1C1917]">
+                    {editingFileId ? 'Edit School Document' : 'Upload or Link School File'}
+                  </h3>
+                  {editingFileId && (
+                    <button
+                      type="button"
+                      onClick={resetFileForm}
+                      className="text-xs font-medium text-[#14532D] underline whitespace-nowrap cursor-pointer"
+                    >
+                      + Upload New File
+                    </button>
+                  )}
+                </div>
+
+                {/* Source Mode Toggle */}
+                <div className="grid grid-cols-2 gap-1.5 rounded-lg border border-[#E5DFD3] bg-[#F3EFE7] p-1">
+                  <button
+                    type="button"
+                    onClick={() => setFileInputMode('upload')}
+                    className={`min-h-[36px] rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      fileInputMode === 'upload'
+                        ? 'bg-[#FFFFFF] text-[#14532D] shadow-xs'
+                        : 'text-[#57534E] hover:text-[#1C1917]'
+                    }`}
+                  >
+                    Upload from Device
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFileInputMode('url')}
+                    className={`min-h-[36px] rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      fileInputMode === 'url'
+                        ? 'bg-[#FFFFFF] text-[#14532D] shadow-xs'
+                        : 'text-[#57534E] hover:text-[#1C1917]'
+                    }`}
+                  >
+                    External File Link
+                  </button>
+                </div>
+
+                {fileInputMode === 'upload' ? (
+                  <div className="space-y-2 rounded-lg border border-dashed border-[#CFC6B4] bg-[#FBF9F5] p-4">
+                    <label className="flex flex-col items-center gap-2 text-center cursor-pointer">
+                      <Upload className="h-5 w-5 text-[#14532D]" aria-hidden="true" />
+                      <span className="text-xs font-semibold text-[#1C1917]">
+                        Choose PDF, Word, Excel, CSV, TXT, or Photo
+                      </span>
+                      <span className="text-[11px] text-[#57534E]">
+                        Direct uploads up to 500 KB (photos auto-optimize). Use External File Link for larger videos or packs.
+                      </span>
+                      <input
+                        type="file"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const picked = e.target.files?.[0];
+                          e.target.value = '';
+                          void handlePickSchoolFile(picked);
+                        }}
+                      />
+                    </label>
+                    {fileForm.fileData && (
+                      <div className="rounded-md border border-[#BBF7D0] bg-[#F0FDF4] px-3 py-2 text-xs text-[#14532D]">
+                        <p className="font-mono font-medium truncate">{fileForm.fileName}</p>
+                        <p className="mt-0.5 text-[11px]">
+                          {getFileExtensionLabel(fileForm.fileName, fileForm.mimeType)} ·{' '}
+                          {formatFileSize(fileForm.sizeBytes)} ready
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2 rounded-lg border border-[#E5DFD3] bg-[#FBF9F5] p-3.5">
+                    <label className="block text-xs font-semibold text-[#1C1917]">
+                      External Download / Resource URL
+                    </label>
+                    <input
+                      type="url"
+                      maxLength={1000}
+                      value={fileForm.fileUrl || ''}
+                      onChange={(e) =>
+                        setFileForm({ ...fileForm, fileUrl: e.target.value, sourceType: 'url' })
+                      }
+                      placeholder="https://drive.google.com/... or https://.../document.pdf"
+                      className="h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FFFFFF] px-3 text-sm"
+                    />
+                    <p className="text-[11px] text-[#57534E]">
+                      Ideal for large PDFs, multi-megabyte handbooks, or school event videos.
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1917]">Document Title</label>
+                  <input
+                    type="text"
+                    required
+                    minLength={2}
+                    maxLength={140}
+                    value={fileForm.title}
+                    onChange={(e) => setFileForm({ ...fileForm, title: e.target.value })}
+                    placeholder="e.g. Term II Admissions Form (PDF)"
+                    className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C1917]">Category</label>
+                    <select
+                      value={fileForm.category}
+                      onChange={(e) =>
+                        setFileForm({
+                          ...fileForm,
+                          category: e.target.value as SchoolFileCategory,
+                        })
+                      }
+                      className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm"
+                    >
+                      <option value="Forms & Admissions">Forms &amp; Admissions</option>
+                      <option value="Curriculum & Booklists">Curriculum &amp; Booklists</option>
+                      <option value="Circulars & Notices">Circulars &amp; Notices</option>
+                      <option value="Reports & Policies">Reports &amp; Policies</option>
+                      <option value="Media & Resources">Media &amp; Resources</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-[#1C1917]">
+                      Download Filename
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={180}
+                      value={fileForm.fileName}
+                      onChange={(e) => setFileForm({ ...fileForm, fileName: e.target.value })}
+                      placeholder="e.g. Admissions-2026.pdf"
+                      className="mt-1 h-10 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 text-sm font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#1C1917]">
+                    Short Description (for parents &amp; students)
+                  </label>
+                  <textarea
+                    rows={3}
+                    required
+                    minLength={5}
+                    maxLength={400}
+                    value={fileForm.description}
+                    onChange={(e) => setFileForm({ ...fileForm, description: e.target.value })}
+                    placeholder="Explain what this file contains and who should download it..."
+                    className="mt-1 w-full rounded-md border border-[#E5DFD3] bg-[#FBF9F5] p-3 text-sm"
+                  />
+                </div>
+
+                <label className="flex items-center gap-2 text-xs font-medium text-[#1C1917] cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={fileForm.published}
+                    onChange={(e) => setFileForm({ ...fileForm, published: e.target.checked })}
+                    className="h-4 w-4 accent-[#14532D]"
+                  />
+                  <span>Published on public website</span>
+                </label>
+
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="inline-flex min-h-[42px] w-full items-center justify-center gap-1.5 rounded-md bg-[#14532D] px-4 py-2 text-sm font-medium text-white hover:bg-[#0F3F22] disabled:opacity-60 cursor-pointer"
+                >
+                  <Upload className="h-4 w-4" aria-hidden="true" />
+                  <span>
+                    {saving
+                      ? 'Saving...'
+                      : editingFileId
+                        ? 'Update School File'
+                        : 'Save & Publish File'}
+                  </span>
+                </button>
+              </form>
+
+              <div className="space-y-3 lg:col-span-7">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="font-display text-lg font-medium text-[#1C1917]">
+                    Published &amp; Draft School Files ({schoolFiles.length})
+                  </h3>
+                  {editingFileId && (
+                    <button
+                      type="button"
+                      onClick={resetFileForm}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-md border border-[#14532D] bg-[#FFFFFF] px-3 text-xs font-medium text-[#14532D] hover:bg-[#F3EFE7] cursor-pointer"
+                    >
+                      <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                      <span>Upload New File</span>
+                    </button>
+                  )}
+                </div>
+
+                {schoolFiles.map((f) => {
+                  const ext = getFileExtensionLabel(f.fileName, f.mimeType);
+                  const isUrlOnly = f.sourceType === 'url' && !f.fileData;
+                  return (
+                    <div
+                      key={f.id}
+                      className="flex flex-col justify-between gap-3 rounded-xl border border-[#E5DFD3] bg-[#FFFFFF] p-4 sm:flex-row sm:items-start"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs text-[#57534E]">
+                          <span className="font-semibold text-[#14532D]">{f.category}</span>
+                          <span> · </span>
+                          <span className="font-mono font-medium text-[#1C1917]">{ext}</span>
+                          <span> · </span>
+                          <span>{formatFileSize(f.sizeBytes)}</span>
+                          <span> · </span>
+                          <span>{f.published ? 'Published' : 'Draft'}</span>
+                        </p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <FileText className="h-4 w-4 shrink-0 text-[#14532D]" aria-hidden="true" />
+                          <h4 className="font-display text-base font-medium text-[#1C1917]">
+                            {f.title}
+                          </h4>
+                        </div>
+                        <p className="mt-0.5 truncate font-mono text-[11px] text-[#57534E]">
+                          {f.fileName}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-xs text-[#57534E]">{f.description}</p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => triggerSchoolFileDownload(f)}
+                          className="inline-flex h-9 items-center gap-1 rounded-md border border-[#E5DFD3] px-2.5 text-xs font-medium text-[#14532D] hover:bg-[#F3EFE7] cursor-pointer"
+                        >
+                          {isUrlOnly ? (
+                            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                          ) : (
+                            <Download className="h-3.5 w-3.5" aria-hidden="true" />
+                          )}
+                          <span>{isUrlOnly ? 'Open' : 'Download'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => loadFileForEdit(f)}
+                          className="inline-flex h-9 items-center gap-1 rounded-md border border-[#E5DFD3] px-2.5 text-xs font-medium text-[#1C1917] hover:bg-[#F3EFE7] cursor-pointer"
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              await deleteSchoolFile(f.id);
+                              if (editingFileId === f.id) {
+                                resetFileForm();
+                              }
+                              notifyOk('School file deleted.');
+                            } catch (err) {
+                              notifyErr(err);
+                            }
+                          }}
+                          className="inline-flex h-9 items-center gap-1 rounded-md border border-[#FECACA] px-2.5 text-xs font-medium text-[#B91C1C] hover:bg-[#FEF2F2] cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* TAB 6: CALENDAR & BELL SCHEDULE */}
           {tab === 'calendar' && (
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
@@ -1966,6 +2686,116 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
             </div>
           )}
 
+          {/* TAB: ONLINE EXAM RESULTS (CENTRAL SUBMISSION LOG) */}
+          {tab === 'exams' && (
+            <div className="space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <h3 className="flex items-center gap-2 font-display text-xl font-medium text-[#0B2E50]">
+                    <GraduationCap className="h-5 w-5 text-[#1769AA]" aria-hidden="true" />
+                    <span>P6 National Exam Submissions ({examSubmissions.length})</span>
+                  </h3>
+                  <p className="mt-1 text-xs text-[#57534E]">
+                    Central score ledger saved automatically whenever learners submit the P6 Science
+                    &amp; Technology Online Exam.
+                  </p>
+                </div>
+              </div>
+
+              {examSubmissions.length > 0 && (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="rounded-xl border border-[#D4DFEB] bg-[#FFFFFF] p-4">
+                    <p className="text-xs font-medium text-[#57534E]">Total Submissions</p>
+                    <p className="mt-1 font-display text-2xl font-semibold text-[#123D68] tabular-figures">
+                      {examSubmissions.length}
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[#D4DFEB] bg-[#FFFFFF] p-4">
+                    <p className="text-xs font-medium text-[#57534E]">Average Score</p>
+                    <p className="mt-1 font-display text-2xl font-semibold text-[#1769AA] tabular-figures">
+                      {Math.round(
+                        examSubmissions.reduce((acc, s) => acc + s.percentage, 0) /
+                          examSubmissions.length,
+                      )}
+                      %
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-[#D4DFEB] bg-[#FFFFFF] p-4">
+                    <p className="text-xs font-medium text-[#57534E]">Highest Score</p>
+                    <p className="mt-1 font-display text-2xl font-semibold text-[#14532D] tabular-figures">
+                      {Math.max(...examSubmissions.map((s) => s.score))} / 50
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {examSubmissions.length === 0 ? (
+                <div className="rounded-xl border border-[#E5DFD3] bg-[#FFFFFF] p-8 text-center text-sm text-[#57534E]">
+                  No P6 online exam submissions recorded yet. Student results appear here
+                  automatically once submitted in the Online Exam section.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {examSubmissions.map((sub) => (
+                    <div
+                      key={sub.id}
+                      className="flex flex-col justify-between gap-4 rounded-xl border border-[#D4DFEB] bg-[#FFFFFF] p-5 sm:flex-row sm:items-center"
+                    >
+                      <div>
+                        <p className="font-mono text-xs font-medium text-[#1769AA] tabular-figures">
+                          {sub.referenceCode} · {sub.createdAtLabel} · Exam Date: {sub.examDate}
+                        </p>
+                        <h4 className="mt-1 font-display text-lg font-medium text-[#0B2E50]">
+                          {sub.studentName}{' '}
+                          <span className="font-sans text-xs font-normal text-[#57534E]">
+                            ({sub.className}
+                            {sub.candidateNumber ? ` · #${sub.candidateNumber}` : ''})
+                          </span>
+                        </h4>
+                        <p className="mt-0.5 text-xs text-[#57534E]">
+                          {sub.schoolName} · {sub.sector} Sector, {sub.district} District
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <p
+                            className={`font-display text-xl font-semibold tabular-figures ${
+                              sub.percentage >= 70 ? 'text-[#14532D]' : 'text-[#123D68]'
+                            }`}
+                          >
+                            {sub.score} / {sub.totalQuestions} ({sub.percentage}%)
+                          </p>
+                          <p className="font-mono text-[11px] text-[#57534E] tabular-figures">
+                            Time: {Math.floor(sub.elapsedSeconds / 60)}m{' '}
+                            {String(sub.elapsedSeconds % 60).padStart(2, '0')}s · Unanswered:{' '}
+                            {sub.unansweredCount}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          aria-label={`Delete exam result for ${sub.studentName}`}
+                          onClick={async () => {
+                            try {
+                              await deleteExamSubmission(sub.id);
+                              notifyOk('Exam submission deleted.');
+                            } catch (err) {
+                              notifyErr(err);
+                            }
+                          }}
+                          className="inline-flex h-9 items-center gap-1 rounded-md border border-[#FECACA] px-2.5 text-xs font-medium text-[#B91C1C] hover:bg-[#FEF2F2] cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* TAB 8: LOGIN & ACCESS DETAILS */}
           {tab === 'access' && (
             <div className="mx-auto max-w-3xl space-y-6">
@@ -2063,6 +2893,18 @@ export function OwnerStudioModal({ open, initialTab = 'posts', onClose }: OwnerS
                 </div>
               )}
             </div>
+          )}
+
+          {tab === 'approvals' && (
+            <OwnerApprovalsPanel notifyOk={notifyOk} notifyErr={notifyErr} />
+          )}
+
+          {tab === 'roster' && (
+            <OwnerRosterPanel notifyOk={notifyOk} notifyErr={notifyErr} />
+          )}
+
+          {tab === 'background' && (
+            <OwnerBackgroundPanel notifyOk={notifyOk} notifyErr={notifyErr} />
           )}
         </div>
       </div>

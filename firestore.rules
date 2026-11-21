@@ -55,8 +55,10 @@ service cloud.firestore {
       ]) &&
       data.keys().hasOnly([
         'schoolName', 'tagline', 'locationLabel', 'heroTitle', 'heroSubtitle',
-        'gradesServed', 'languages', 'schoolHours', 'contactEmail', 'campusAddress',
-        'officeHours', 'historyNote', 'plePassRate', 'updatedAt', 'updatedBy'
+        'gradesServed', 'languages', 'schoolHours', 'contactEmail', 'phoneNumber',
+        'campusAddress', 'officeHours', 'historyNote', 'plePassRate',
+        'heroBgMode', 'heroBgImage', 'heroBgOverlay', 'aiLessonTrainerNotes',
+        'updatedAt', 'updatedBy'
       ]) &&
       isValidString(data.schoolName, 3, 120) &&
       isValidString(data.tagline, 3, 160) &&
@@ -67,10 +69,15 @@ service cloud.firestore {
       isValidString(data.languages, 2, 120) &&
       isValidString(data.schoolHours, 3, 80) &&
       isValidString(data.contactEmail, 5, 120) &&
+      (!('phoneNumber' in data) || (data.phoneNumber is string && data.phoneNumber.size() <= 40)) &&
       isValidString(data.campusAddress, 3, 160) &&
       isValidString(data.officeHours, 3, 120) &&
       isValidString(data.historyNote, 3, 200) &&
       isValidString(data.plePassRate, 2, 20) &&
+      (!('heroBgMode' in data) || data.heroBgMode in ['default', 'campus_courtyard', 'science_garden', 'library', 'sports_pitch', 'lake_sunset', 'custom']) &&
+      (!('heroBgImage' in data) || (data.heroBgImage is string && data.heroBgImage.size() <= 250000)) &&
+      (!('heroBgOverlay' in data) || (data.heroBgOverlay is int && data.heroBgOverlay >= 10 && data.heroBgOverlay <= 90)) &&
+      (!('aiLessonTrainerNotes' in data) || (data.aiLessonTrainerNotes is string && data.aiLessonTrainerNotes.size() <= 2500)) &&
       isValidString(data.updatedBy, 3, 120) &&
       data.updatedAt is timestamp &&
       data.updatedAt == request.time;
@@ -83,7 +90,8 @@ service cloud.firestore {
       ]) &&
       data.keys().hasOnly([
         'title', 'category', 'summary', 'body', 'authorName', 'authorEmail',
-        'published', 'pinned', 'imageUrl', 'createdAt', 'updatedAt'
+        'published', 'pinned', 'imageUrl', 'videoUrl', 'approvalStatus', 'submittedByUid',
+        'createdAt', 'updatedAt'
       ]) &&
       isValidString(data.title, 3, 160) &&
       data.category in ['Announcements', 'Academics', 'Community & Events', 'Achievements'] &&
@@ -93,7 +101,10 @@ service cloud.firestore {
       isValidString(data.authorEmail, 5, 120) &&
       data.published is bool &&
       data.pinned is bool &&
-      (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500)) &&
+      (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 250000)) &&
+      (!('videoUrl' in data) || (data.videoUrl is string && data.videoUrl.size() <= 500)) &&
+      (!('approvalStatus' in data) || data.approvalStatus in ['approved', 'pending', 'rejected']) &&
+      (!('submittedByUid' in data) || (data.submittedByUid is string && data.submittedByUid.size() <= 128)) &&
       data.createdAt is timestamp &&
       data.updatedAt is timestamp &&
       data.updatedAt == request.time;
@@ -116,7 +127,7 @@ service cloud.firestore {
       isValidString(data.ageRange, 2, 60) &&
       isValidString(data.headline, 5, 160) &&
       isValidString(data.summary, 10, 800) &&
-      isValidString(data.image, 1, 500) &&
+      isValidString(data.image, 1, 1000) &&
       isValidString(data.imageAlt, 5, 240) &&
       isValidString(data.figureCaption, 5, 200) &&
       data.weeklyHours is number && data.weeklyHours >= 1 && data.weeklyHours <= 60 &&
@@ -145,7 +156,7 @@ service cloud.firestore {
       isValidString(data.description, 10, 800) &&
       data.highlights is list && data.highlights.size() >= 1 && data.highlights.size() <= 8 &&
       data.highlights[0] is string &&
-      isValidString(data.image, 1, 500) &&
+      isValidString(data.image, 1, 250000) &&
       isValidString(data.imageAlt, 5, 240) &&
       isValidString(data.figureNumber, 2, 20) &&
       data.featured is bool &&
@@ -257,6 +268,282 @@ service cloud.firestore {
       data.updatedAt == request.time;
     }
 
+    function isValidSchoolFile(data) {
+      return data.keys().hasAll([
+        'title', 'category', 'description', 'fileName', 'mimeType',
+        'sizeBytes', 'sourceType', 'uploadedBy', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'category', 'description', 'fileName', 'mimeType',
+        'sizeBytes', 'sourceType', 'fileUrl', 'fileData', 'uploadedBy',
+        'published', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidString(data.title, 2, 140) &&
+      data.category in [
+        'Forms & Admissions',
+        'Curriculum & Booklists',
+        'Circulars & Notices',
+        'Reports & Policies',
+        'Media & Resources'
+      ] &&
+      isValidString(data.description, 5, 400) &&
+      isValidString(data.fileName, 1, 180) &&
+      isValidString(data.mimeType, 3, 120) &&
+      data.sizeBytes is int && data.sizeBytes >= 0 && data.sizeBytes <= 104857600 &&
+      data.sourceType in ['upload', 'url', 'generated'] &&
+      (!('fileUrl' in data) || (data.fileUrl is string && data.fileUrl.size() <= 1000)) &&
+      (!('fileData' in data) || (data.fileData is string && data.fileData.size() <= 700000)) &&
+      isValidString(data.uploadedBy, 3, 120) &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidExamSubmission(data) {
+      return data.keys().hasAll([
+        'referenceCode', 'examTitle', 'district', 'sector', 'schoolName',
+        'studentName', 'className', 'examDate', 'score', 'totalQuestions',
+        'percentage', 'unansweredCount', 'elapsedSeconds', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'referenceCode', 'examTitle', 'district', 'sector', 'schoolName',
+        'studentName', 'className', 'candidateNumber', 'examDate', 'score',
+        'totalQuestions', 'percentage', 'unansweredCount', 'elapsedSeconds', 'createdAt'
+      ]) &&
+      isValidString(data.referenceCode, 6, 32) &&
+      isValidString(data.examTitle, 3, 140) &&
+      isValidString(data.district, 2, 80) &&
+      isValidString(data.sector, 2, 80) &&
+      isValidString(data.schoolName, 2, 120) &&
+      isValidString(data.studentName, 2, 100) &&
+      isValidString(data.className, 1, 40) &&
+      (!('candidateNumber' in data) || (data.candidateNumber is string && data.candidateNumber.size() <= 60)) &&
+      isValidString(data.examDate, 4, 32) &&
+      data.score is int && data.score >= 0 && data.score <= 100 &&
+      data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 100 &&
+      data.score <= data.totalQuestions &&
+      data.percentage is int && data.percentage >= 0 && data.percentage <= 100 &&
+      data.unansweredCount is int && data.unansweredCount >= 0 && data.unansweredCount <= 100 &&
+      data.elapsedSeconds is int && data.elapsedSeconds >= 0 && data.elapsedSeconds <= 43200 &&
+      data.createdAt is timestamp &&
+      data.createdAt == request.time;
+    }
+
+    function isValidUserProfile(data, uid) {
+      return data.keys().hasAll([
+        'uid', 'email', 'displayName', 'accountKind', 'avatarType', 'avatarValue',
+        'themeMode', 'privacyShowEmail', 'privacyShowPhone', 'privacyAllowMessages',
+        'privacyPublicCircle', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'email', 'displayName', 'accountKind', 'avatarType', 'avatarValue',
+        'photoDataUrl', 'phone', 'classOrSubject', 'bio',
+        'themeMode', 'privacyShowEmail', 'privacyShowPhone', 'privacyAllowMessages',
+        'privacyPublicCircle', 'createdAt', 'updatedAt'
+      ]) &&
+      data.uid == uid &&
+      isValidString(data.email, 5, 120) &&
+      isValidString(data.displayName, 1, 100) &&
+      data.accountKind in ['student', 'parent', 'teacher'] &&
+      data.avatarType in ['photo', 'sticker', 'avatar'] &&
+      data.avatarValue is string && data.avatarValue.size() <= 80 &&
+      (!('photoDataUrl' in data) || (data.photoDataUrl is string && data.photoDataUrl.size() <= 250000)) &&
+      (!('phone' in data) || (data.phone is string && data.phone.size() <= 40)) &&
+      (!('classOrSubject' in data) || (data.classOrSubject is string && data.classOrSubject.size() <= 100)) &&
+      (!('bio' in data) || (data.bio is string && data.bio.size() <= 400)) &&
+      data.themeMode in ['light', 'dark'] &&
+      data.privacyShowEmail is bool &&
+      data.privacyShowPhone is bool &&
+      data.privacyAllowMessages is bool &&
+      data.privacyPublicCircle is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidPublicProfile(data, uid) {
+      return data.keys().hasAll([
+        'uid', 'displayName', 'roleLabel', 'avatarType', 'avatarValue', 'showPublicly', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'uid', 'displayName', 'roleLabel', 'avatarType', 'avatarValue',
+        'photoDataUrl', 'classOrSubject', 'showPublicly', 'updatedAt'
+      ]) &&
+      data.uid == uid &&
+      isValidString(data.displayName, 1, 100) &&
+      isValidString(data.roleLabel, 2, 80) &&
+      data.avatarType in ['photo', 'sticker', 'avatar'] &&
+      data.avatarValue is string && data.avatarValue.size() <= 80 &&
+      (!('photoDataUrl' in data) || (data.photoDataUrl is string && data.photoDataUrl.size() <= 250000)) &&
+      (!('classOrSubject' in data) || (data.classOrSubject is string && data.classOrSubject.size() <= 100)) &&
+      data.showPublicly is bool &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidDirectMessage(data) {
+      return data.keys().hasAll([
+        'senderUid', 'senderName', 'senderEmail', 'recipientUid', 'subject', 'body', 'read', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'senderUid', 'senderName', 'senderEmail', 'recipientUid', 'subject', 'body', 'read', 'createdAt'
+      ]) &&
+      isValidId(data.senderUid) &&
+      isValidString(data.senderName, 1, 100) &&
+      isValidString(data.senderEmail, 5, 120) &&
+      isValidId(data.recipientUid) &&
+      isValidString(data.subject, 2, 140) &&
+      isValidString(data.body, 2, 2000) &&
+      data.read is bool &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidNotificationItem(data) {
+      return data.keys().hasAll(['recipientUid', 'title', 'body', 'kind', 'read', 'createdAt']) &&
+      data.keys().hasOnly(['recipientUid', 'title', 'body', 'kind', 'read', 'createdAt']) &&
+      isValidId(data.recipientUid) &&
+      isValidString(data.title, 2, 140) &&
+      isValidString(data.body, 2, 500) &&
+      data.kind in ['approval', 'message', 'exam', 'announcement', 'performance'] &&
+      data.read is bool &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidLibraryItem(data) {
+      return data.keys().hasAll([
+        'title', 'itemType', 'subject', 'gradeLevel', 'description', 'fileName', 'mimeType',
+        'sizeBytes', 'sourceType', 'approvalStatus', 'submittedByUid', 'submittedByName',
+        'submittedByEmail', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'itemType', 'subject', 'gradeLevel', 'description', 'fileName', 'mimeType',
+        'sizeBytes', 'sourceType', 'fileUrl', 'fileData', 'storyChapters', 'quizQuestions',
+        'approvalStatus', 'submittedByUid', 'submittedByName', 'submittedByEmail',
+        'createdAt', 'updatedAt'
+      ]) &&
+      isValidString(data.title, 2, 160) &&
+      data.itemType in ['Book', 'Exam', 'Test', 'Lesson Plan', 'Storybook'] &&
+      data.subject in [
+        'IKINYARWANDA', 'MATHEMATICS', 'SET', 'SRE', 'CREATIVE ARTS',
+        'FRENCH', 'ENGLISH', 'PHYSICAL EDUCATION', 'RELIGIOUS', 'OTHER BOOKS'
+      ] &&
+      isValidString(data.gradeLevel, 2, 60) &&
+      isValidString(data.description, 5, 600) &&
+      isValidString(data.fileName, 1, 180) &&
+      isValidString(data.mimeType, 3, 120) &&
+      data.sizeBytes is int && data.sizeBytes >= 0 && data.sizeBytes <= 104857600 &&
+      data.sourceType in ['upload', 'url', 'storybook', 'ai_generated', 'quiz'] &&
+      (!('fileUrl' in data) || (data.fileUrl is string && data.fileUrl.size() <= 1000)) &&
+      (!('fileData' in data) || (data.fileData is string && data.fileData.size() <= 700000)) &&
+      (!('storyChapters' in data) || (data.storyChapters is list && data.storyChapters.size() <= 20 && (data.storyChapters.size() == 0 || data.storyChapters[0] is map))) &&
+      (!('quizQuestions' in data) || (data.quizQuestions is list && data.quizQuestions.size() <= 30 && (data.quizQuestions.size() == 0 || data.quizQuestions[0] is map))) &&
+      data.approvalStatus in ['approved', 'pending', 'rejected'] &&
+      isValidId(data.submittedByUid) &&
+      isValidString(data.submittedByName, 2, 100) &&
+      isValidString(data.submittedByEmail, 5, 120) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidOnlineTestSubmission(data) {
+      return data.keys().hasAll([
+        'testId', 'testTitle', 'subject', 'studentName', 'className',
+        'score', 'totalQuestions', 'percentage', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'testId', 'testTitle', 'subject', 'studentName', 'className',
+        'score', 'totalQuestions', 'percentage', 'createdAt'
+      ]) &&
+      isValidString(data.testId, 2, 128) &&
+      isValidString(data.testTitle, 2, 160) &&
+      isValidString(data.subject, 2, 60) &&
+      isValidString(data.studentName, 2, 100) &&
+      isValidString(data.className, 1, 40) &&
+      data.score is int && data.score >= 0 && data.score <= 100 &&
+      data.totalQuestions is int && data.totalQuestions >= 1 && data.totalQuestions <= 100 &&
+      data.score <= data.totalQuestions &&
+      data.percentage is int && data.percentage >= 0 && data.percentage <= 100 &&
+      data.createdAt is timestamp &&
+      data.createdAt == request.time;
+    }
+
+    function isValidSportsEntertainmentItem(data) {
+      return data.keys().hasAll([
+        'title', 'activityType', 'eventDate', 'description', 'highlights',
+        'approvalStatus', 'submittedByUid', 'submittedByName', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'activityType', 'eventDate', 'description', 'imageUrl', 'videoUrl',
+        'highlights', 'approvalStatus', 'submittedByUid', 'submittedByName', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidString(data.title, 3, 160) &&
+      data.activityType in ['Sports', 'Entertainment', 'Club & Culture'] &&
+      isValidString(data.eventDate, 3, 40) &&
+      isValidString(data.description, 10, 1200) &&
+      (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 250000)) &&
+      (!('videoUrl' in data) || (data.videoUrl is string && data.videoUrl.size() <= 500)) &&
+      data.highlights is list && data.highlights.size() <= 8 &&
+      (data.highlights.size() == 0 || data.highlights[0] is string) &&
+      data.approvalStatus in ['approved', 'pending', 'rejected'] &&
+      isValidId(data.submittedByUid) &&
+      isValidString(data.submittedByName, 2, 100) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidStudentRecord(data) {
+      return data.keys().hasAll([
+        'studentName', 'className', 'gender', 'term1Avg', 'term2Avg',
+        'term3Avg', 'pleAvg', 'subjectScores', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'studentName', 'className', 'gender', 'studentCode', 'term1Avg',
+        'term2Avg', 'term3Avg', 'pleAvg', 'subjectScores', 'updatedAt'
+      ]) &&
+      isValidString(data.studentName, 2, 100) &&
+      isValidString(data.className, 2, 20) &&
+      data.gender in ['Female', 'Male'] &&
+      (!('studentCode' in data) || (data.studentCode is string && data.studentCode.size() <= 40)) &&
+      data.term1Avg is number && data.term1Avg >= 0 && data.term1Avg <= 100 &&
+      data.term2Avg is number && data.term2Avg >= 0 && data.term2Avg <= 100 &&
+      data.term3Avg is number && data.term3Avg >= 0 && data.term3Avg <= 100 &&
+      data.pleAvg is number && data.pleAvg >= 0 && data.pleAvg <= 100 &&
+      data.subjectScores is map &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidClassPerformanceSummary(data) {
+      return data.keys().hasAll([
+        'className', 'order', 'totalStudents', 'femaleCount', 'maleCount',
+        'term1Avg', 'term2Avg', 'term3Avg', 'pleAvg', 'passRatePct',
+        'femaleAvg', 'maleAvg', 'subjectAverages', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'className', 'order', 'totalStudents', 'femaleCount', 'maleCount',
+        'term1Avg', 'term2Avg', 'term3Avg', 'pleAvg', 'passRatePct',
+        'femaleAvg', 'maleAvg', 'subjectAverages', 'updatedAt'
+      ]) &&
+      isValidString(data.className, 2, 20) &&
+      data.order is int &&
+      data.totalStudents is int && data.totalStudents >= 0 && data.totalStudents <= 1000 &&
+      data.femaleCount is int && data.femaleCount >= 0 && data.femaleCount <= 1000 &&
+      data.maleCount is int && data.maleCount >= 0 && data.maleCount <= 1000 &&
+      data.term1Avg is number && data.term1Avg >= 0 && data.term1Avg <= 100 &&
+      data.term2Avg is number && data.term2Avg >= 0 && data.term2Avg <= 100 &&
+      data.term3Avg is number && data.term3Avg >= 0 && data.term3Avg <= 100 &&
+      data.pleAvg is number && data.pleAvg >= 0 && data.pleAvg <= 100 &&
+      data.passRatePct is number && data.passRatePct >= 0 && data.passRatePct <= 100 &&
+      data.femaleAvg is number && data.femaleAvg >= 0 && data.femaleAvg <= 100 &&
+      data.maleAvg is number && data.maleAvg >= 0 && data.maleAvg <= 100 &&
+      data.subjectAverages is map &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
     // 1. School Settings (Public read, Admin write)
     match /schoolSettings/{settingId} {
       allow get: if isValidId(settingId);
@@ -265,13 +552,25 @@ service cloud.firestore {
       allow delete: if isValidId(settingId) && isAdmin();
     }
 
-    // 2. Website Posts / Announcements (Published public read, all posts Admin read/write)
+    // 2. Website Posts / Announcements (Published & approved public read; teachers can create pending)
     match /posts/{postId} {
-      allow get: if isValidId(postId) && (existing().published == true || isAdmin());
-      allow list: if resource.data.published == true || isAdmin();
-      allow create: if isValidId(postId) && isAdmin() && isValidPost(incoming()) && incoming().createdAt == request.time;
+      allow get: if isValidId(postId) && (
+        (existing().published == true && (!('approvalStatus' in existing()) || existing().approvalStatus == 'approved')) ||
+        (isSignedIn() && 'submittedByUid' in existing() && existing().submittedByUid == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if (resource.data.published == true) ||
+        (isSignedIn() && resource.data.submittedByUid == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(postId) && isSignedIn() && isValidPost(incoming()) && incoming().createdAt == request.time && (
+        isAdmin() ||
+        (incoming().approvalStatus == 'pending' && incoming().published == false && incoming().pinned == false && incoming().submittedByUid == request.auth.uid)
+      );
       allow update: if isValidId(postId) && isAdmin() && isValidPost(incoming()) && incoming().createdAt == existing().createdAt;
-      allow delete: if isValidId(postId) && isAdmin();
+      allow delete: if isValidId(postId) && (
+        isAdmin() ||
+        (isSignedIn() && 'submittedByUid' in existing() && existing().submittedByUid == request.auth.uid && existing().approvalStatus == 'pending')
+      );
     }
 
     // 3. Academic Divisions (Public read, Admin write)
@@ -314,7 +613,7 @@ service cloud.firestore {
       allow delete: if isValidId(slotId) && isAdmin();
     }
 
-    // 8. Admissions Inquiries (Public create only with status 'new'; PII read/update/delete strictly Admin)
+    // 8. Admissions Inquiries (Public create only with status 'new'; PII strictly Admin)
     match /inquiries/{inquiryId} {
       allow get: if isValidId(inquiryId) && isAdmin();
       allow list: if isAdmin();
@@ -332,7 +631,7 @@ service cloud.firestore {
       allow delete: if isValidId(inquiryId) && isAdmin();
     }
 
-    // 9. Co-Admin Emails (Primary owner only can read/write; verified signed-in user can check own doc)
+    // 9. Co-Admin Emails (Primary owner only writes; verified signed-in user can check own doc)
     match /adminEmails/{emailId} {
       allow get: if isValidEmailId(emailId) && (isPrimaryOwner() || (isSignedIn() && userEmailLower() == emailId));
       allow list: if isPrimaryOwner();
@@ -341,13 +640,147 @@ service cloud.firestore {
       allow delete: if isValidEmailId(emailId) && isPrimaryOwner();
     }
 
-    // 10. Parent & Student Testimonials (Published public read, all records Admin read/write)
+    // 10. Parent & Student Testimonials (Published public read, Admin write)
     match /testimonials/{testimonialId} {
       allow get: if isValidId(testimonialId) && (existing().published == true || isAdmin());
       allow list: if resource.data.published == true || isAdmin();
       allow create: if isValidId(testimonialId) && isAdmin() && isValidTestimonial(incoming()) && incoming().createdAt == request.time;
       allow update: if isValidId(testimonialId) && isAdmin() && isValidTestimonial(incoming()) && incoming().createdAt == existing().createdAt;
       allow delete: if isValidId(testimonialId) && isAdmin();
+    }
+
+    // 11. School Documents & Downloadable Files
+    match /schoolFiles/{fileId} {
+      allow get: if isValidId(fileId) && (existing().published == true || isAdmin());
+      allow list: if resource.data.published == true || isAdmin();
+      allow create: if isValidId(fileId) && isAdmin() && isValidSchoolFile(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(fileId) && isAdmin() && isValidSchoolFile(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(fileId) && isAdmin();
+    }
+
+    // 12. Online Examination Submissions (Public student create once; Admin read/delete)
+    match /examSubmissions/{submissionId} {
+      allow get: if isValidId(submissionId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(submissionId)
+        && isValidExamSubmission(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(submissionId) && isAdmin();
+    }
+
+    // 13. Private User Profiles (Split-collection PII: strictly owner or Admin)
+    match /userProfiles/{uid} {
+      allow get: if isValidId(uid) && ((isSignedIn() && request.auth.uid == uid) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(uid) && isSignedIn() && request.auth.uid == uid && isValidUserProfile(incoming(), uid) && incoming().createdAt == request.time;
+      allow update: if isValidId(uid) && isSignedIn() && (request.auth.uid == uid || isAdmin()) && isValidUserProfile(incoming(), uid) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(uid) && isAdmin();
+    }
+
+    // 14. Public Circle Profile Badges (Non-PII circular avatars)
+    match /publicProfiles/{uid} {
+      allow get: if isValidId(uid) && (existing().showPublicly == true || (isSignedIn() && request.auth.uid == uid) || isAdmin());
+      allow list: if resource.data.showPublicly == true || isAdmin();
+      allow create, update: if isValidId(uid) && isSignedIn() && (request.auth.uid == uid || isAdmin()) && isValidPublicProfile(incoming(), uid);
+      allow delete: if isValidId(uid) && (isAdmin() || (isSignedIn() && request.auth.uid == uid));
+    }
+
+    // 15. Direct Messages
+    match /messages/{messageId} {
+      allow get: if isValidId(messageId) && (isAdmin() || (isSignedIn() && (existing().senderUid == request.auth.uid || existing().recipientUid == request.auth.uid)));
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.senderUid == request.auth.uid || resource.data.recipientUid == request.auth.uid));
+      allow create: if isValidId(messageId) && isSignedIn() && isValidDirectMessage(incoming()) && incoming().senderUid == request.auth.uid && incoming().read == false && incoming().createdAt == request.time;
+      allow update: if isValidId(messageId) && isSignedIn() && isValidDirectMessage(incoming()) && incoming().createdAt == existing().createdAt && incoming().senderUid == existing().senderUid && (
+        isAdmin() ||
+        (existing().recipientUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['read']))
+      );
+      allow delete: if isValidId(messageId) && (isAdmin() || (isSignedIn() && existing().senderUid == request.auth.uid));
+    }
+
+    // 16. Notifications
+    match /notifications/{notifId} {
+      allow get: if isValidId(notifId) && (existing().recipientUid == 'ALL' || isAdmin() || (isSignedIn() && existing().recipientUid == request.auth.uid));
+      allow list: if resource.data.recipientUid == 'ALL' || isAdmin() || (isSignedIn() && resource.data.recipientUid == request.auth.uid);
+      allow create: if isValidId(notifId) && isSignedIn() && isValidNotificationItem(incoming()) && incoming().read == false && incoming().createdAt == request.time && (
+        isAdmin() || incoming().recipientUid == 'ADMINS'
+      );
+      allow update: if isValidId(notifId) && isSignedIn() && isValidNotificationItem(incoming()) && incoming().createdAt == existing().createdAt && incoming().recipientUid == existing().recipientUid && (
+        isAdmin() ||
+        (existing().recipientUid == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['read']))
+      );
+      allow delete: if isValidId(notifId) && (isAdmin() || (isSignedIn() && existing().recipientUid == request.auth.uid));
+    }
+
+    // 17. Digital Subject Library (Books, Exams, Tests, Lesson Plans, Storybooks)
+    match /libraryItems/{itemId} {
+      allow get: if isValidId(itemId) && (
+        existing().approvalStatus == 'approved' ||
+        (isSignedIn() && existing().submittedByUid == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if resource.data.approvalStatus == 'approved' ||
+        (isSignedIn() && resource.data.submittedByUid == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(itemId) && isSignedIn() && isValidLibraryItem(incoming()) && incoming().submittedByUid == request.auth.uid && incoming().createdAt == request.time && (
+        isAdmin() || incoming().approvalStatus == 'pending'
+      );
+      allow update: if isValidId(itemId) && isSignedIn() && isValidLibraryItem(incoming()) && incoming().createdAt == existing().createdAt && (
+        isAdmin() ||
+        (existing().submittedByUid == request.auth.uid && existing().approvalStatus != 'approved' && incoming().approvalStatus == 'pending' && incoming().submittedByUid == existing().submittedByUid)
+      );
+      allow delete: if isValidId(itemId) && (
+        isAdmin() ||
+        (isSignedIn() && existing().submittedByUid == request.auth.uid && existing().approvalStatus != 'approved')
+      );
+    }
+
+    // 18. Online Subject Test Submissions
+    match /onlineTestSubmissions/{submissionId} {
+      allow get: if isValidId(submissionId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(submissionId) && isValidOnlineTestSubmission(incoming()) && incoming().createdAt == request.time;
+      allow update: if false;
+      allow delete: if isValidId(submissionId) && isAdmin();
+    }
+
+    // 19. Sports & Entertainment Activities
+    match /sportsEntertainment/{itemId} {
+      allow get: if isValidId(itemId) && (
+        existing().approvalStatus == 'approved' ||
+        (isSignedIn() && existing().submittedByUid == request.auth.uid) ||
+        isAdmin()
+      );
+      allow list: if resource.data.approvalStatus == 'approved' ||
+        (isSignedIn() && resource.data.submittedByUid == request.auth.uid) ||
+        isAdmin();
+      allow create: if isValidId(itemId) && isSignedIn() && isValidSportsEntertainmentItem(incoming()) && incoming().submittedByUid == request.auth.uid && incoming().createdAt == request.time && (
+        isAdmin() || incoming().approvalStatus == 'pending'
+      );
+      allow update: if isValidId(itemId) && isSignedIn() && isValidSportsEntertainmentItem(incoming()) && incoming().createdAt == existing().createdAt && (
+        isAdmin() ||
+        (existing().submittedByUid == request.auth.uid && existing().approvalStatus != 'approved' && incoming().approvalStatus == 'pending' && incoming().submittedByUid == existing().submittedByUid)
+      );
+      allow delete: if isValidId(itemId) && (
+        isAdmin() ||
+        (isSignedIn() && existing().submittedByUid == request.auth.uid && existing().approvalStatus != 'approved')
+      );
+    }
+
+    // 20. Student Roster & Individual Subject Marks (Admin-only PII)
+    match /studentRecords/{studentId} {
+      allow get: if isValidId(studentId) && isAdmin();
+      allow list: if isAdmin();
+      allow create, update: if isValidId(studentId) && isAdmin() && isValidStudentRecord(incoming());
+      allow delete: if isValidId(studentId) && isAdmin();
+    }
+
+    // 21. Class & Gender Aggregated Performance Summaries (Public read, Admin write)
+    match /classPerformanceSummaries/{classId} {
+      allow get: if isValidId(classId);
+      allow list: if true;
+      allow create, update: if isValidId(classId) && isAdmin() && isValidClassPerformanceSummary(incoming());
+      allow delete: if isValidId(classId) && isAdmin();
     }
   }
 }

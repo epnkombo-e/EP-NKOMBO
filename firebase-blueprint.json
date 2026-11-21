@@ -2,7 +2,7 @@
   "entities": {
     "SchoolSettings": {
       "title": "SchoolSettings",
-      "description": "Core institutional profile, hero copy, contact details, and operational metrics for EP Saint Pierre Nkombo.",
+      "description": "Core institutional profile, hero copy, home background configuration, AI lesson trainer rules, contact details, and operational metrics for EP Saint Pierre Nkombo.",
       "type": "object",
       "properties": {
         "schoolName": { "type": "string", "minLength": 3, "maxLength": 120 },
@@ -14,10 +14,18 @@
         "languages": { "type": "string", "minLength": 2, "maxLength": 120 },
         "schoolHours": { "type": "string", "minLength": 3, "maxLength": 80 },
         "contactEmail": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "phoneNumber": { "type": "string", "maxLength": 40 },
         "campusAddress": { "type": "string", "minLength": 3, "maxLength": 160 },
         "officeHours": { "type": "string", "minLength": 3, "maxLength": 120 },
         "historyNote": { "type": "string", "minLength": 3, "maxLength": 200 },
         "plePassRate": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "heroBgMode": {
+          "type": "string",
+          "enum": ["default", "campus_courtyard", "science_garden", "library", "sports_pitch", "lake_sunset", "custom"]
+        },
+        "heroBgImage": { "type": "string", "maxLength": 250000 },
+        "heroBgOverlay": { "type": "integer" },
+        "aiLessonTrainerNotes": { "type": "string", "maxLength": 2500 },
         "updatedAt": { "type": "string", "format": "date-time" },
         "updatedBy": { "type": "string", "minLength": 3, "maxLength": 120 }
       },
@@ -41,7 +49,7 @@
     },
     "Post": {
       "title": "Post",
-      "description": "Website news article, official announcement, or community update published by the school owner.",
+      "description": "Website news article, official announcement, or community update published by the school owner or submitted by teachers for owner approval.",
       "type": "object",
       "properties": {
         "title": { "type": "string", "minLength": 3, "maxLength": 160 },
@@ -55,7 +63,13 @@
         "authorEmail": { "type": "string", "minLength": 5, "maxLength": 120 },
         "published": { "type": "boolean" },
         "pinned": { "type": "boolean" },
-        "imageUrl": { "type": "string", "maxLength": 500 },
+        "imageUrl": { "type": "string", "maxLength": 250000 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "approvalStatus": {
+          "type": "string",
+          "enum": ["approved", "pending", "rejected"]
+        },
+        "submittedByUid": { "type": "string", "maxLength": 128 },
         "createdAt": { "type": "string", "format": "date-time" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
@@ -83,7 +97,7 @@
         "ageRange": { "type": "string", "minLength": 2, "maxLength": 60 },
         "headline": { "type": "string", "minLength": 5, "maxLength": 160 },
         "summary": { "type": "string", "minLength": 10, "maxLength": 800 },
-        "image": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "image": { "type": "string", "minLength": 1, "maxLength": 1000 },
         "imageAlt": { "type": "string", "minLength": 5, "maxLength": 240 },
         "figureCaption": { "type": "string", "minLength": 5, "maxLength": 200 },
         "weeklyHours": { "type": "number" },
@@ -120,7 +134,7 @@
         "subtitle": { "type": "string", "minLength": 2, "maxLength": 80 },
         "description": { "type": "string", "minLength": 10, "maxLength": 800 },
         "highlights": { "type": "array" },
-        "image": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "image": { "type": "string", "minLength": 1, "maxLength": 250000 },
         "imageAlt": { "type": "string", "minLength": 5, "maxLength": 240 },
         "figureNumber": { "type": "string", "minLength": 2, "maxLength": 20 },
         "featured": { "type": "boolean" },
@@ -276,16 +290,406 @@
         "createdAt",
         "updatedAt"
       ]
+    },
+    "SchoolFile": {
+      "title": "SchoolFile",
+      "description": "Downloadable school document, registration form, booklist, circular, or media resource uploaded or linked by the school owner.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "category": {
+          "type": "string",
+          "enum": [
+            "Forms & Admissions",
+            "Curriculum & Booklists",
+            "Circulars & Notices",
+            "Reports & Policies",
+            "Media & Resources"
+          ]
+        },
+        "description": { "type": "string", "minLength": 5, "maxLength": 400 },
+        "fileName": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "mimeType": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "sizeBytes": { "type": "integer" },
+        "sourceType": {
+          "type": "string",
+          "enum": ["upload", "url", "generated"]
+        },
+        "fileUrl": { "type": "string", "maxLength": 1000 },
+        "fileData": { "type": "string", "maxLength": 700000 },
+        "uploadedBy": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "category",
+        "description",
+        "fileName",
+        "mimeType",
+        "sizeBytes",
+        "sourceType",
+        "uploadedBy",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ExamSubmission": {
+      "title": "ExamSubmission",
+      "description": "Primary Leaving National Examination Science & Technology online attempt submitted by a student; contains student PII and is readable/deletable strictly by school admins.",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "minLength": 6, "maxLength": 32 },
+        "examTitle": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "district": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "sector": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "schoolName": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "className": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "candidateNumber": { "type": "string", "maxLength": 60 },
+        "examDate": { "type": "string", "minLength": 4, "maxLength": 32 },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "percentage": { "type": "integer" },
+        "unansweredCount": { "type": "integer" },
+        "elapsedSeconds": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "referenceCode",
+        "examTitle",
+        "district",
+        "sector",
+        "schoolName",
+        "studentName",
+        "className",
+        "examDate",
+        "score",
+        "totalQuestions",
+        "percentage",
+        "unansweredCount",
+        "elapsedSeconds",
+        "createdAt"
+      ]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private user account preferences, PII, privacy settings, and appearance mode strictly readable/writable by that user or school admins.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "accountKind": {
+          "type": "string",
+          "enum": ["student", "parent", "teacher"]
+        },
+        "avatarType": {
+          "type": "string",
+          "enum": ["photo", "sticker", "avatar"]
+        },
+        "avatarValue": { "type": "string", "maxLength": 80 },
+        "photoDataUrl": { "type": "string", "maxLength": 250000 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "classOrSubject": { "type": "string", "maxLength": 100 },
+        "bio": { "type": "string", "maxLength": 400 },
+        "themeMode": {
+          "type": "string",
+          "enum": ["light", "dark"]
+        },
+        "privacyShowEmail": { "type": "boolean" },
+        "privacyShowPhone": { "type": "boolean" },
+        "privacyAllowMessages": { "type": "boolean" },
+        "privacyPublicCircle": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "email",
+        "displayName",
+        "accountKind",
+        "avatarType",
+        "avatarValue",
+        "themeMode",
+        "privacyShowEmail",
+        "privacyShowPhone",
+        "privacyAllowMessages",
+        "privacyPublicCircle",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PublicProfile": {
+      "title": "PublicProfile",
+      "description": "Non-PII circular badge profile shown to community members when user opts into public circle display.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "displayName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "roleLabel": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "avatarType": {
+          "type": "string",
+          "enum": ["photo", "sticker", "avatar"]
+        },
+        "avatarValue": { "type": "string", "maxLength": 80 },
+        "photoDataUrl": { "type": "string", "maxLength": 250000 },
+        "classOrSubject": { "type": "string", "maxLength": 100 },
+        "showPublicly": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "uid",
+        "displayName",
+        "roleLabel",
+        "avatarType",
+        "avatarValue",
+        "showPublicly",
+        "updatedAt"
+      ]
+    },
+    "DirectMessage": {
+      "title": "DirectMessage",
+      "description": "Direct school/teacher/parent message with sender/recipient isolation.",
+      "type": "object",
+      "properties": {
+        "senderUid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "senderName": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "senderEmail": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "recipientUid": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "body": { "type": "string", "minLength": 2, "maxLength": 2000 },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["senderUid", "senderName", "senderEmail", "recipientUid", "subject", "body", "read", "createdAt"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "User or admin alert notification for approvals, announcements, messages, or marks updates.",
+      "type": "object",
+      "properties": {
+        "recipientUid": { "type": "string", "minLength": 3, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "body": { "type": "string", "minLength": 2, "maxLength": 500 },
+        "kind": {
+          "type": "string",
+          "enum": ["approval", "message", "exam", "announcement", "performance"]
+        },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["recipientUid", "title", "body", "kind", "read", "createdAt"]
+    },
+    "LibraryItem": {
+      "title": "LibraryItem",
+      "description": "Subject library book, exam, test, lesson plan, or storybook with teacher upload & owner approval status.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "itemType": {
+          "type": "string",
+          "enum": ["Book", "Exam", "Test", "Lesson Plan", "Storybook"]
+        },
+        "subject": {
+          "type": "string",
+          "enum": [
+            "IKINYARWANDA",
+            "MATHEMATICS",
+            "SET",
+            "SRE",
+            "CREATIVE ARTS",
+            "FRENCH",
+            "ENGLISH",
+            "PHYSICAL EDUCATION",
+            "RELIGIOUS",
+            "OTHER BOOKS"
+          ]
+        },
+        "gradeLevel": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "description": { "type": "string", "minLength": 5, "maxLength": 600 },
+        "fileName": { "type": "string", "minLength": 1, "maxLength": 180 },
+        "mimeType": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "sizeBytes": { "type": "integer" },
+        "sourceType": {
+          "type": "string",
+          "enum": ["upload", "url", "storybook", "ai_generated", "quiz"]
+        },
+        "fileUrl": { "type": "string", "maxLength": 1000 },
+        "fileData": { "type": "string", "maxLength": 700000 },
+        "storyChapters": { "type": "array" },
+        "quizQuestions": { "type": "array" },
+        "approvalStatus": {
+          "type": "string",
+          "enum": ["approved", "pending", "rejected"]
+        },
+        "submittedByUid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "submittedByName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "submittedByEmail": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "itemType",
+        "subject",
+        "gradeLevel",
+        "description",
+        "fileName",
+        "mimeType",
+        "sizeBytes",
+        "sourceType",
+        "approvalStatus",
+        "submittedByUid",
+        "submittedByName",
+        "submittedByEmail",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OnlineTestSubmission": {
+      "title": "OnlineTestSubmission",
+      "description": "Subject online test attempt with student name, class, score, and percentage.",
+      "type": "object",
+      "properties": {
+        "testId": { "type": "string", "minLength": 2, "maxLength": 128 },
+        "testTitle": { "type": "string", "minLength": 2, "maxLength": 160 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "className": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "score": { "type": "integer" },
+        "totalQuestions": { "type": "integer" },
+        "percentage": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "testId",
+        "testTitle",
+        "subject",
+        "studentName",
+        "className",
+        "score",
+        "totalQuestions",
+        "percentage",
+        "createdAt"
+      ]
+    },
+    "SportsEntertainmentItem": {
+      "title": "SportsEntertainmentItem",
+      "description": "Sports activity, choir, cultural dance, or campus entertainment event.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "activityType": {
+          "type": "string",
+          "enum": ["Sports", "Entertainment", "Club & Culture"]
+        },
+        "eventDate": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 1200 },
+        "imageUrl": { "type": "string", "maxLength": 250000 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "highlights": { "type": "array" },
+        "approvalStatus": {
+          "type": "string",
+          "enum": ["approved", "pending", "rejected"]
+        },
+        "submittedByUid": { "type": "string", "minLength": 4, "maxLength": 128 },
+        "submittedByName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "activityType",
+        "eventDate",
+        "description",
+        "highlights",
+        "approvalStatus",
+        "submittedByUid",
+        "submittedByName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "StudentRecord": {
+      "title": "StudentRecord",
+      "description": "Class student roster entry with gender and term/PLE subject marks, managed strictly by school admins.",
+      "type": "object",
+      "properties": {
+        "studentName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "className": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "gender": {
+          "type": "string",
+          "enum": ["Female", "Male"]
+        },
+        "studentCode": { "type": "string", "maxLength": 40 },
+        "term1Avg": { "type": "number" },
+        "term2Avg": { "type": "number" },
+        "term3Avg": { "type": "number" },
+        "pleAvg": { "type": "number" },
+        "subjectScores": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "studentName",
+        "className",
+        "gender",
+        "term1Avg",
+        "term2Avg",
+        "term3Avg",
+        "pleAvg",
+        "subjectScores",
+        "updatedAt"
+      ]
+    },
+    "ClassPerformanceSummary": {
+      "title": "ClassPerformanceSummary",
+      "description": "Aggregated non-PII class & gender academic performance summary across Terms 1-3 and PLE National Exam.",
+      "type": "object",
+      "properties": {
+        "className": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "order": { "type": "integer" },
+        "totalStudents": { "type": "integer" },
+        "femaleCount": { "type": "integer" },
+        "maleCount": { "type": "integer" },
+        "term1Avg": { "type": "number" },
+        "term2Avg": { "type": "number" },
+        "term3Avg": { "type": "number" },
+        "pleAvg": { "type": "number" },
+        "passRatePct": { "type": "number" },
+        "femaleAvg": { "type": "number" },
+        "maleAvg": { "type": "number" },
+        "subjectAverages": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "className",
+        "order",
+        "totalStudents",
+        "femaleCount",
+        "maleCount",
+        "term1Avg",
+        "term2Avg",
+        "term3Avg",
+        "pleAvg",
+        "passRatePct",
+        "femaleAvg",
+        "maleAvg",
+        "subjectAverages",
+        "updatedAt"
+      ]
     }
   },
   "firestore": {
     "/schoolSettings/{settingId}": {
       "schema": { "$ref": "#/entities/SchoolSettings" },
-      "description": "School-wide profile settings and operational metrics."
+      "description": "School-wide profile settings, home background, AI trainer rules, and operational metrics."
     },
     "/posts/{postId}": {
       "schema": { "$ref": "#/entities/Post" },
-      "description": "School news posts and official announcements."
+      "description": "School news posts and official announcements (supporting teacher pending approval)."
     },
     "/academics/{divisionId}": {
       "schema": { "$ref": "#/entities/AcademicDivision" },
@@ -318,6 +722,50 @@
     "/testimonials/{testimonialId}": {
       "schema": { "$ref": "#/entities/Testimonial" },
       "description": "Published parent and student testimonials managed by school owner/admins."
+    },
+    "/schoolFiles/{fileId}": {
+      "schema": { "$ref": "#/entities/SchoolFile" },
+      "description": "Publicly downloadable school files and owner-uploaded documents."
+    },
+    "/examSubmissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/ExamSubmission" },
+      "description": "Student online examination submissions (PII and scores readable only by school owner/admins)."
+    },
+    "/userProfiles/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private user account profiles, appearance theme, and privacy preferences."
+    },
+    "/publicProfiles/{uid}": {
+      "schema": { "$ref": "#/entities/PublicProfile" },
+      "description": "Non-PII circular badge profiles opted in for community visibility."
+    },
+    "/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/DirectMessage" },
+      "description": "Direct messages between signed-in community members and the school office."
+    },
+    "/notifications/{notifId}": {
+      "schema": { "$ref": "#/entities/NotificationItem" },
+      "description": "Account and school approval notifications."
+    },
+    "/libraryItems/{itemId}": {
+      "schema": { "$ref": "#/entities/LibraryItem" },
+      "description": "10-subject digital library books, lesson plans, exams, tests, and storybooks."
+    },
+    "/onlineTestSubmissions/{submissionId}": {
+      "schema": { "$ref": "#/entities/OnlineTestSubmission" },
+      "description": "Subject quiz & online test student submissions."
+    },
+    "/sportsEntertainment/{itemId}": {
+      "schema": { "$ref": "#/entities/SportsEntertainmentItem" },
+      "description": "Sports fixtures, choir, and cultural entertainment activities."
+    },
+    "/studentRecords/{studentId}": {
+      "schema": { "$ref": "#/entities/StudentRecord" },
+      "description": "Individual student rosters with gender and per-subject marks (admin-only PII)."
+    },
+    "/classPerformanceSummaries/{classId}": {
+      "schema": { "$ref": "#/entities/ClassPerformanceSummary" },
+      "description": "Public aggregated class & gender term/PLE performance analytics."
     }
   }
 }

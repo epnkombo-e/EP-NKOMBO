@@ -28,6 +28,7 @@ import {
   CAMPUS_SPACES,
   DAILY_SCHEDULE,
   DEFAULT_POSTS,
+  DEFAULT_SCHOOL_FILES,
   DEFAULT_SCHOOL_SETTINGS,
   DEFAULT_TESTIMONIALS,
   FACULTY_MEMBERS,
@@ -38,8 +39,12 @@ import {
   type CalendarEvent,
   type CampusSpace,
   type DailyScheduleRow,
+  type ExamSubmissionRecord,
   type FacultyMember,
   type PostCategory,
+  type SchoolFileCategory,
+  type SchoolFileRecord,
+  type SchoolFileSourceType,
   type SchoolPost,
   type SchoolSettings,
   type SchoolTestimonial,
@@ -62,6 +67,7 @@ export interface NewPostPayload {
   published: boolean;
   pinned: boolean;
   imageUrl?: string;
+  videoUrl?: string;
 }
 
 export interface NewInquiryPayload {
@@ -82,6 +88,35 @@ export interface NewTestimonialPayload {
   published: boolean;
 }
 
+export interface NewSchoolFilePayload {
+  title: string;
+  category: SchoolFileCategory;
+  description: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  sourceType: SchoolFileSourceType;
+  fileUrl?: string;
+  fileData?: string;
+  published: boolean;
+}
+
+export interface NewExamSubmissionPayload {
+  examTitle: string;
+  district: string;
+  sector: string;
+  schoolName: string;
+  studentName: string;
+  className: string;
+  candidateNumber?: string;
+  examDate: string;
+  score: number;
+  totalQuestions: number;
+  percentage: number;
+  unansweredCount: number;
+  elapsedSeconds: number;
+}
+
 interface SchoolDataContextValue {
   user: User | null;
   authReady: boolean;
@@ -98,14 +133,19 @@ interface SchoolDataContextValue {
   faculty: FacultyMember[];
   testimonials: SchoolTestimonial[];
   testimonialsLoading: boolean;
+  schoolFiles: SchoolFileRecord[];
+  schoolFilesLoading: boolean;
   calendarEvents: CalendarEvent[];
   dailySchedule: DailyScheduleRow[];
   inquiries: AdmissionsInquiryRecord[];
+  examSubmissions: ExamSubmissionRecord[];
   adminEmails: AdminEmailRecord[];
   hasSyncedFromDb: boolean;
 
   saveSchoolSettings: (next: SchoolSettings) => Promise<void>;
   savePost: (payload: NewPostPayload, existingId?: string) => Promise<void>;
+  approvePost: (id: string) => Promise<void>;
+  rejectPost: (id: string) => Promise<void>;
   deletePost: (id: string) => Promise<void>;
   saveAcademicDivision: (division: AcademicDivision) => Promise<void>;
   deleteAcademicDivision: (id: string) => Promise<void>;
@@ -115,6 +155,8 @@ interface SchoolDataContextValue {
   deleteFacultyMember: (id: string) => Promise<void>;
   saveTestimonial: (payload: NewTestimonialPayload, existingId?: string) => Promise<void>;
   deleteTestimonial: (id: string) => Promise<void>;
+  saveSchoolFile: (payload: NewSchoolFilePayload, existingId?: string) => Promise<void>;
+  deleteSchoolFile: (id: string) => Promise<void>;
   saveCalendarEvent: (event: Omit<CalendarEvent, 'id'>, existingId?: string) => Promise<void>;
   deleteCalendarEvent: (id: string) => Promise<void>;
   saveDailyScheduleSlot: (slot: Omit<DailyScheduleRow, 'id'>, existingId?: string) => Promise<void>;
@@ -126,6 +168,8 @@ interface SchoolDataContextValue {
     ownerNotes: string,
   ) => Promise<void>;
   deleteInquiry: (id: string) => Promise<void>;
+  submitExamAttempt: (payload: NewExamSubmissionPayload) => Promise<string>;
+  deleteExamSubmission: (id: string) => Promise<void>;
   addCoAdminEmail: (email: string, label: string) => Promise<void>;
   removeCoAdminEmail: (email: string) => Promise<void>;
   seedAllDefaultsToFirestore: () => Promise<void>;
@@ -173,9 +217,12 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
   const [dbFaculty, setDbFaculty] = useState<FacultyMember[] | null>(null);
   const [dbTestimonials, setDbTestimonials] = useState<SchoolTestimonial[] | null>(null);
   const [testimonialsLoading, setTestimonialsLoading] = useState(true);
+  const [dbSchoolFiles, setDbSchoolFiles] = useState<SchoolFileRecord[] | null>(null);
+  const [schoolFilesLoading, setSchoolFilesLoading] = useState(true);
   const [dbEvents, setDbEvents] = useState<CalendarEvent[] | null>(null);
   const [dbSchedule, setDbSchedule] = useState<DailyScheduleRow[] | null>(null);
   const [inquiries, setInquiries] = useState<AdmissionsInquiryRecord[]>([]);
+  const [examSubmissions, setExamSubmissions] = useState<ExamSubmissionRecord[]>([]);
   const [adminEmails, setAdminEmails] = useState<AdminEmailRecord[]>([]);
 
   const isPrimaryOwner = Boolean(
@@ -238,10 +285,20 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
           languages: String(d.languages ?? DEFAULT_SCHOOL_SETTINGS.languages),
           schoolHours: String(d.schoolHours ?? DEFAULT_SCHOOL_SETTINGS.schoolHours),
           contactEmail: String(d.contactEmail ?? DEFAULT_SCHOOL_SETTINGS.contactEmail),
+          phoneNumber: String(d.phoneNumber ?? DEFAULT_SCHOOL_SETTINGS.phoneNumber),
           campusAddress: String(d.campusAddress ?? DEFAULT_SCHOOL_SETTINGS.campusAddress),
           officeHours: String(d.officeHours ?? DEFAULT_SCHOOL_SETTINGS.officeHours),
           historyNote: String(d.historyNote ?? DEFAULT_SCHOOL_SETTINGS.historyNote),
           plePassRate: String(d.plePassRate ?? DEFAULT_SCHOOL_SETTINGS.plePassRate),
+          heroBgMode: (d.heroBgMode ?? DEFAULT_SCHOOL_SETTINGS.heroBgMode) as SchoolSettings['heroBgMode'],
+          heroBgImage: d.heroBgImage ? String(d.heroBgImage) : '',
+          heroBgOverlay:
+            typeof d.heroBgOverlay === 'number'
+              ? d.heroBgOverlay
+              : DEFAULT_SCHOOL_SETTINGS.heroBgOverlay,
+          aiLessonTrainerNotes: String(
+            d.aiLessonTrainerNotes ?? DEFAULT_SCHOOL_SETTINGS.aiLessonTrainerNotes,
+          ),
         });
       } else {
         setDbSettings(null);
@@ -397,6 +454,9 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
             published: Boolean(data.published),
             pinned: Boolean(data.pinned),
             imageUrl: data.imageUrl ? String(data.imageUrl) : undefined,
+            videoUrl: data.videoUrl ? String(data.videoUrl) : undefined,
+            approvalStatus: (data.approvalStatus ?? 'approved') as SchoolPost['approvalStatus'],
+            submittedByUid: data.submittedByUid ? String(data.submittedByUid) : undefined,
             createdAtMs: parsedTime.ms,
             displayDate: parsedTime.label,
           } as SchoolPost;
@@ -407,16 +467,40 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
         });
 
     if (!isAdmin) {
-      void getDocs(query(collection(db, 'posts'), where('published', '==', true)))
-        .then((snap) => {
-          setDbPosts(snap.empty ? null : mapPosts(snap.docs));
-        })
-        .catch((err) => {
+      const fetchPublicAndOwn = async () => {
+        try {
+          const pubSnap = await getDocs(
+            query(collection(db, 'posts'), where('published', '==', true)),
+          );
+          const mergedDocs = new Map<string, { id: string; data: () => Record<string, unknown> }>();
+          for (const d of pubSnap.docs) {
+            mergedDocs.set(d.id, d);
+          }
+
+          if (user?.emailVerified && user.uid) {
+            try {
+              const ownSnap = await getDocs(
+                query(collection(db, 'posts'), where('submittedByUid', '==', user.uid)),
+              );
+              for (const d of ownSnap.docs) {
+                mergedDocs.set(d.id, d);
+              }
+            } catch (ownErr) {
+              console.warn('Own pending posts query skipped:', ownErr);
+            }
+          }
+
+          const arr = Array.from(mergedDocs.values());
+          setDbPosts(arr.length === 0 ? null : mapPosts(arr));
+        } catch (err) {
           if (isPermissionError(err)) {
             handleFirestoreError(err, OperationType.LIST, 'posts');
           }
           console.warn('Using bundled default posts while Firestore is unreachable:', err);
-        });
+        }
+      };
+
+      void fetchPublicAndOwn();
       return;
     }
 
@@ -434,7 +518,7 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
     );
 
     return () => unsub();
-  }, [authReady, isAdmin]);
+  }, [authReady, isAdmin, user?.uid, user?.emailVerified]);
 
   // Load parent & student testimonials (one-shot for public visitors, live onSnapshot when signed in as admin)
   useEffect(() => {
@@ -502,10 +586,78 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
     return () => unsub();
   }, [authReady, isAdmin]);
 
-  // Admin-only listeners for PII inquiries & co-admin emails
+  // Load downloadable school files (one-shot for public visitors, live onSnapshot when signed in as admin)
+  useEffect(() => {
+    if (!authReady) return;
+
+    const mapSchoolFiles = (
+      docs: { id: string; data: () => Record<string, unknown> }[],
+    ): SchoolFileRecord[] =>
+      docs
+        .map((d) => {
+          const data = d.data();
+          const parsedTime = formatDateFromTimestamp(data.createdAt);
+          return {
+            id: d.id,
+            title: String(data.title ?? ''),
+            category: (data.category ?? 'Forms & Admissions') as SchoolFileCategory,
+            description: String(data.description ?? ''),
+            fileName: String(data.fileName ?? 'school-document'),
+            mimeType: String(data.mimeType ?? 'application/octet-stream'),
+            sizeBytes: Math.max(0, Math.round(Number(data.sizeBytes ?? 0))),
+            sourceType: (data.sourceType ?? 'upload') as SchoolFileSourceType,
+            fileUrl: data.fileUrl ? String(data.fileUrl) : undefined,
+            fileData: data.fileData ? String(data.fileData) : undefined,
+            uploadedBy: String(data.uploadedBy ?? PRIMARY_OWNER_EMAIL),
+            published: Boolean(data.published),
+            createdAtMs: parsedTime.ms,
+            displayDate: parsedTime.label,
+          };
+        })
+        .sort((a, b) => b.createdAtMs - a.createdAtMs);
+
+    if (!isAdmin) {
+      setSchoolFilesLoading(true);
+      void getDocs(query(collection(db, 'schoolFiles'), where('published', '==', true)))
+        .then((snap) => {
+          setDbSchoolFiles(snap.empty ? null : mapSchoolFiles(snap.docs));
+        })
+        .catch((err) => {
+          if (isPermissionError(err)) {
+            handleFirestoreError(err, OperationType.LIST, 'schoolFiles');
+          }
+          console.warn('Using bundled default school files while Firestore is unreachable:', err);
+        })
+        .finally(() => {
+          setSchoolFilesLoading(false);
+        });
+      return;
+    }
+
+    setSchoolFilesLoading(true);
+    const unsub = onSnapshot(
+      collection(db, 'schoolFiles'),
+      (snap) => {
+        setDbSchoolFiles(snap.empty ? null : mapSchoolFiles(snap.docs));
+        setSchoolFilesLoading(false);
+      },
+      (err) => {
+        setSchoolFilesLoading(false);
+        if (isPermissionError(err)) {
+          handleFirestoreError(err, OperationType.LIST, 'schoolFiles');
+        }
+        console.warn('School files live listener warning:', err);
+      },
+    );
+
+    return () => unsub();
+  }, [authReady, isAdmin]);
+
+  // Admin-only listeners for PII inquiries, exam submissions & co-admin emails
   useEffect(() => {
     if (!authReady || !isAdmin) {
       setInquiries([]);
+      setExamSubmissions([]);
       setAdminEmails([]);
       return;
     }
@@ -541,6 +693,46 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
             handleFirestoreError(err, OperationType.LIST, 'inquiries');
           }
           console.warn('Inquiries listener warning:', err);
+        },
+      ),
+    );
+
+    unsubs.push(
+      onSnapshot(
+        collection(db, 'examSubmissions'),
+        (snap) => {
+          const rows = snap.docs
+            .map((d) => {
+              const data = d.data();
+              const t = formatDateFromTimestamp(data.createdAt);
+              return {
+                id: d.id,
+                referenceCode: String(data.referenceCode ?? ''),
+                examTitle: String(data.examTitle ?? ''),
+                district: String(data.district ?? ''),
+                sector: String(data.sector ?? ''),
+                schoolName: String(data.schoolName ?? ''),
+                studentName: String(data.studentName ?? ''),
+                className: String(data.className ?? ''),
+                candidateNumber: data.candidateNumber ? String(data.candidateNumber) : undefined,
+                examDate: String(data.examDate ?? ''),
+                score: Math.max(0, Math.round(Number(data.score ?? 0))),
+                totalQuestions: Math.max(1, Math.round(Number(data.totalQuestions ?? 50))),
+                percentage: Math.max(0, Math.min(100, Math.round(Number(data.percentage ?? 0)))),
+                unansweredCount: Math.max(0, Math.round(Number(data.unansweredCount ?? 0))),
+                elapsedSeconds: Math.max(0, Math.round(Number(data.elapsedSeconds ?? 0))),
+                createdAtMs: t.ms,
+                createdAtLabel: t.label,
+              } as ExamSubmissionRecord;
+            })
+            .sort((a, b) => b.createdAtMs - a.createdAtMs);
+          setExamSubmissions(rows);
+        },
+        (err) => {
+          if (isPermissionError(err)) {
+            handleFirestoreError(err, OperationType.LIST, 'examSubmissions');
+          }
+          console.warn('Exam submissions listener warning:', err);
         },
       ),
     );
@@ -688,6 +880,27 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    if (!dbSchoolFiles) {
+      for (const f of DEFAULT_SCHOOL_FILES) {
+        const payload: Record<string, unknown> = {
+          title: f.title,
+          category: f.category,
+          description: f.description,
+          fileName: f.fileName,
+          mimeType: f.mimeType,
+          sizeBytes: Math.round(f.sizeBytes),
+          sourceType: f.sourceType,
+          uploadedBy: f.uploadedBy,
+          published: f.published,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        if (f.fileUrl) payload.fileUrl = f.fileUrl;
+        if (f.fileData) payload.fileData = f.fileData;
+        batch.set(doc(db, 'schoolFiles', f.id), payload);
+      }
+    }
+
     try {
       await batch.commit();
       await refreshPublicCatalog();
@@ -763,6 +976,26 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
           updatedAt: serverTimestamp(),
         });
       }
+    } else if (collectionName === 'schoolFiles' && !dbSchoolFiles) {
+      hasWrites = true;
+      for (const f of DEFAULT_SCHOOL_FILES) {
+        const payload: Record<string, unknown> = {
+          title: f.title,
+          category: f.category,
+          description: f.description,
+          fileName: f.fileName,
+          mimeType: f.mimeType,
+          sizeBytes: Math.round(f.sizeBytes),
+          sourceType: f.sourceType,
+          uploadedBy: f.uploadedBy,
+          published: f.published,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        if (f.fileUrl) payload.fileUrl = f.fileUrl;
+        if (f.fileData) payload.fileData = f.fileData;
+        batch.set(doc(db, 'schoolFiles', f.id), payload);
+      }
     }
 
     if (hasWrites) {
@@ -773,7 +1006,7 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
   const saveSchoolSettings = async (next: SchoolSettings) => {
     const path = 'schoolSettings/main';
     try {
-      await setDoc(doc(db, 'schoolSettings', 'main'), {
+      const payload: Record<string, unknown> = {
         schoolName: next.schoolName.trim().slice(0, 120),
         tagline: next.tagline.trim().slice(0, 160),
         locationLabel: next.locationLabel.trim().slice(0, 140),
@@ -783,13 +1016,19 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
         languages: next.languages.trim().slice(0, 120),
         schoolHours: next.schoolHours.trim().slice(0, 80),
         contactEmail: next.contactEmail.trim().slice(0, 120),
+        phoneNumber: next.phoneNumber.trim().slice(0, 40),
         campusAddress: next.campusAddress.trim().slice(0, 160),
         officeHours: next.officeHours.trim().slice(0, 120),
         historyNote: next.historyNote.trim().slice(0, 200),
         plePassRate: next.plePassRate.trim().slice(0, 20),
+        heroBgMode: next.heroBgMode ?? 'default',
+        heroBgImage: (next.heroBgImage ?? '').trim().slice(0, 250000),
+        heroBgOverlay: Math.max(10, Math.min(90, Math.round(Number(next.heroBgOverlay) || 60))),
+        aiLessonTrainerNotes: (next.aiLessonTrainerNotes ?? '').trim().slice(0, 2500),
         updatedAt: serverTimestamp(),
         updatedBy: user?.email ?? PRIMARY_OWNER_EMAIL,
-      });
+      };
+      await setDoc(doc(db, 'schoolSettings', 'main'), payload);
       await refreshPublicCatalog();
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
@@ -800,7 +1039,9 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
     const id = existingId || makeSlugId('post');
     const path = `posts/${id}`;
     try {
-      await ensureCollectionSeeded('posts');
+      if (isAdmin) {
+        await ensureCollectionSeeded('posts');
+      }
       const existingDoc = existingId ? await getDoc(doc(db, 'posts', id)) : null;
 
       const writeBody: Record<string, unknown> = {
@@ -810,12 +1051,17 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
         body: payload.body.trim().slice(0, 5000),
         authorName: payload.authorName.trim().slice(0, 100),
         authorEmail: user?.email ?? PRIMARY_OWNER_EMAIL,
-        published: payload.published,
-        pinned: payload.pinned,
+        published: isAdmin ? payload.published : false,
+        pinned: isAdmin ? payload.pinned : false,
+        approvalStatus: isAdmin ? 'approved' : 'pending',
+        submittedByUid: user?.uid ?? 'admin',
         updatedAt: serverTimestamp(),
       };
       if (payload.imageUrl?.trim()) {
-        writeBody.imageUrl = payload.imageUrl.trim().slice(0, 500);
+        writeBody.imageUrl = payload.imageUrl.trim().slice(0, 250000);
+      }
+      if (payload.videoUrl?.trim()) {
+        writeBody.videoUrl = payload.videoUrl.trim().slice(0, 500);
       }
 
       if (existingDoc && existingDoc.exists()) {
@@ -825,15 +1071,102 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
         writeBody.createdAt = serverTimestamp();
         await setDoc(doc(db, 'posts', id), writeBody);
       }
+
+      if (!isAdmin && user) {
+        await setDoc(doc(db, 'notifications', makeSlugId('notif')), {
+          recipientUid: 'ADMINS',
+          title: 'Teacher Post Waiting for Approval',
+          body: `${payload.authorName || user.email} submitted post "${payload.title}" for Owner review.`,
+          kind: 'approval',
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+
+        const localPost: SchoolPost = {
+          id,
+          title: String(writeBody.title),
+          category: payload.category,
+          summary: String(writeBody.summary),
+          body: String(writeBody.body),
+          authorName: String(writeBody.authorName),
+          authorEmail: String(writeBody.authorEmail),
+          published: false,
+          pinned: false,
+          imageUrl: writeBody.imageUrl ? String(writeBody.imageUrl) : undefined,
+          videoUrl: writeBody.videoUrl ? String(writeBody.videoUrl) : undefined,
+          approvalStatus: 'pending',
+          submittedByUid: user.uid,
+          createdAtMs: Date.now(),
+          displayDate: formatDateFromTimestamp(null).label,
+        };
+        setDbPosts((prev) => {
+          const base = prev ?? DEFAULT_POSTS;
+          return [localPost, ...base.filter((item) => item.id !== id)];
+        });
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const approvePost = async (id: string) => {
+    const path = `posts/${id}`;
+    try {
+      const snap = await getDoc(doc(db, 'posts', id));
+      if (!snap.exists()) return;
+      const d = snap.data();
+      await updateDoc(doc(db, 'posts', id), {
+        published: true,
+        approvalStatus: 'approved',
+        updatedAt: serverTimestamp(),
+      });
+      if (d.submittedByUid && d.submittedByUid !== 'admin') {
+        await setDoc(doc(db, 'notifications', makeSlugId('notif')), {
+          recipientUid: String(d.submittedByUid),
+          title: 'Your School Post Was Approved',
+          body: `Owner approved and published "${String(d.title ?? 'School Post')}" on the website.`,
+          kind: 'approval',
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
+    }
+  };
+
+  const rejectPost = async (id: string) => {
+    const path = `posts/${id}`;
+    try {
+      const snap = await getDoc(doc(db, 'posts', id));
+      if (!snap.exists()) return;
+      const d = snap.data();
+      await updateDoc(doc(db, 'posts', id), {
+        published: false,
+        approvalStatus: 'rejected',
+        updatedAt: serverTimestamp(),
+      });
+      if (d.submittedByUid && d.submittedByUid !== 'admin') {
+        await setDoc(doc(db, 'notifications', makeSlugId('notif')), {
+          recipientUid: String(d.submittedByUid),
+          title: 'Post Returned by Owner',
+          body: `Your submission "${String(d.title ?? 'School Post')}" was not published. Contact the School Office for details.`,
+          kind: 'approval',
+          read: false,
+          createdAt: serverTimestamp(),
+        });
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, path);
     }
   };
 
   const deletePost = async (id: string) => {
     const path = `posts/${id}`;
     try {
-      await ensureCollectionSeeded('posts');
+      if (isAdmin) {
+        await ensureCollectionSeeded('posts');
+      }
       await deleteDoc(doc(db, 'posts', id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
@@ -874,6 +1207,7 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       const { id: _ignored, ...rest } = space;
       await setDoc(doc(db, 'campusSpaces', id), {
         ...rest,
+        image: rest.image.trim().slice(0, 250000),
         updatedAt: serverTimestamp(),
       });
       await refreshPublicCatalog();
@@ -960,6 +1294,57 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
     try {
       await ensureCollectionSeeded('testimonials');
       await deleteDoc(doc(db, 'testimonials', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
+  const saveSchoolFile = async (payload: NewSchoolFilePayload, existingId?: string) => {
+    const id = existingId || makeSlugId('file');
+    const path = `schoolFiles/${id}`;
+    try {
+      await ensureCollectionSeeded('schoolFiles');
+      const existingDoc = existingId ? await getDoc(doc(db, 'schoolFiles', id)) : null;
+
+      const writeBody: Record<string, unknown> = {
+        title: payload.title.trim().slice(0, 140),
+        category: payload.category,
+        description: payload.description.trim().slice(0, 400),
+        fileName: payload.fileName.trim().slice(0, 180) || 'school-document',
+        mimeType: payload.mimeType.trim().slice(0, 120) || 'application/octet-stream',
+        sizeBytes: Math.max(0, Math.min(104857600, Math.round(Number(payload.sizeBytes) || 0))),
+        sourceType: payload.sourceType,
+        uploadedBy: (user?.email ?? PRIMARY_OWNER_EMAIL).trim().slice(0, 120),
+        published: Boolean(payload.published),
+        updatedAt: serverTimestamp(),
+      };
+      if (payload.fileUrl?.trim()) {
+        writeBody.fileUrl = payload.fileUrl.trim().slice(0, 1000);
+      }
+      if (payload.fileData?.trim()) {
+        if (payload.fileData.trim().length > 700000) {
+          throw new Error('Uploaded file exceeds direct 500 KB limit. Use External File Link mode for larger files.');
+        }
+        writeBody.fileData = payload.fileData.trim();
+      }
+
+      if (existingDoc && existingDoc.exists()) {
+        writeBody.createdAt = existingDoc.data().createdAt;
+        await setDoc(doc(db, 'schoolFiles', id), writeBody);
+      } else {
+        writeBody.createdAt = serverTimestamp();
+        await setDoc(doc(db, 'schoolFiles', id), writeBody);
+      }
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, path);
+    }
+  };
+
+  const deleteSchoolFile = async (id: string) => {
+    const path = `schoolFiles/${id}`;
+    try {
+      await ensureCollectionSeeded('schoolFiles');
+      await deleteDoc(doc(db, 'schoolFiles', id));
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, path);
     }
@@ -1080,6 +1465,59 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const submitExamAttempt = async (payload: NewExamSubmissionPayload): Promise<string> => {
+    const id = makeSlugId('exam');
+    const path = `examSubmissions/${id}`;
+    const referenceCode = `SET-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+    const totalQuestions = Math.max(1, Math.min(100, Math.round(Number(payload.totalQuestions) || 50)));
+    const score = Math.max(0, Math.min(totalQuestions, Math.round(Number(payload.score) || 0)));
+    const percentage = Math.max(0, Math.min(100, Math.round(Number(payload.percentage) || 0)));
+    const unansweredCount = Math.max(
+      0,
+      Math.min(100, Math.round(Number(payload.unansweredCount) || 0)),
+    );
+    const elapsedSeconds = Math.max(
+      0,
+      Math.min(43200, Math.round(Number(payload.elapsedSeconds) || 0)),
+    );
+
+    const writeBody: Record<string, unknown> = {
+      referenceCode,
+      examTitle: payload.examTitle.trim().slice(0, 140),
+      district: payload.district.trim().slice(0, 80),
+      sector: payload.sector.trim().slice(0, 80),
+      schoolName: payload.schoolName.trim().slice(0, 120),
+      studentName: payload.studentName.trim().slice(0, 100),
+      className: payload.className.trim().slice(0, 40),
+      examDate: payload.examDate.trim().slice(0, 32),
+      score,
+      totalQuestions,
+      percentage,
+      unansweredCount,
+      elapsedSeconds,
+      createdAt: serverTimestamp(),
+    };
+    if (payload.candidateNumber?.trim()) {
+      writeBody.candidateNumber = payload.candidateNumber.trim().slice(0, 60);
+    }
+
+    try {
+      await setDoc(doc(db, 'examSubmissions', id), writeBody);
+      return referenceCode;
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, path);
+    }
+  };
+
+  const deleteExamSubmission = async (id: string) => {
+    const path = `examSubmissions/${id}`;
+    try {
+      await deleteDoc(doc(db, 'examSubmissions', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, path);
+    }
+  };
+
   const addCoAdminEmail = async (email: string, label: string) => {
     const normalized = email.trim().toLowerCase();
     const path = `adminEmails/${normalized}`;
@@ -1121,9 +1559,12 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       faculty: dbFaculty ?? FACULTY_MEMBERS,
       testimonials: dbTestimonials ?? DEFAULT_TESTIMONIALS,
       testimonialsLoading,
+      schoolFiles: dbSchoolFiles ?? DEFAULT_SCHOOL_FILES,
+      schoolFilesLoading,
       calendarEvents: dbEvents ?? CALENDAR_EVENTS,
       dailySchedule: dbSchedule ?? DAILY_SCHEDULE,
       inquiries,
+      examSubmissions,
       adminEmails,
       hasSyncedFromDb: Boolean(
         dbSettings ||
@@ -1132,11 +1573,14 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
           dbSpaces ||
           dbFaculty ||
           dbTestimonials ||
+          dbSchoolFiles ||
           dbEvents ||
           dbSchedule,
       ),
       saveSchoolSettings,
       savePost,
+      approvePost,
+      rejectPost,
       deletePost,
       saveAcademicDivision,
       deleteAcademicDivision,
@@ -1146,6 +1590,8 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       deleteFacultyMember,
       saveTestimonial,
       deleteTestimonial,
+      saveSchoolFile,
+      deleteSchoolFile,
       saveCalendarEvent,
       deleteCalendarEvent,
       saveDailyScheduleSlot,
@@ -1153,6 +1599,8 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       submitInquiry,
       updateInquiryStatus,
       deleteInquiry,
+      submitExamAttempt,
+      deleteExamSubmission,
       addCoAdminEmail,
       removeCoAdminEmail,
       seedAllDefaultsToFirestore,
@@ -1170,9 +1618,12 @@ export function SchoolDataProvider({ children }: { children: ReactNode }) {
       dbFaculty,
       dbTestimonials,
       testimonialsLoading,
+      dbSchoolFiles,
+      schoolFilesLoading,
       dbEvents,
       dbSchedule,
       inquiries,
+      examSubmissions,
       adminEmails,
     ],
   );

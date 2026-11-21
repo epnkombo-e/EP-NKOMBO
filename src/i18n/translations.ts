@@ -49,6 +49,8 @@ export interface UIStrings {
     faculty: string;
     testimonials: string;
     calendar: string;
+    documents: string;
+    exam: string;
     admissions: string;
     ownerLogin: string;
     ownerStudio: string;
@@ -215,6 +217,24 @@ export interface UIStrings {
     signOutBtn: string;
     openStudioBtn: string;
   };
+  files: {
+    kicker: string;
+    heading: string;
+    intro: string;
+    uploadBtn: string;
+    filterAll: string;
+    catForms: string;
+    catCurriculum: string;
+    catCirculars: string;
+    catReports: string;
+    catMedia: string;
+    downloadBtn: string;
+    downloadedLabel: string;
+    externalLinkLabel: string;
+    loading: string;
+    empty: string;
+    emptyHint: string;
+  };
 }
 
 const en: UIStrings = {
@@ -228,6 +248,8 @@ const en: UIStrings = {
     faculty: 'Faculty',
     testimonials: 'Testimonials',
     calendar: 'Calendar',
+    documents: 'Documents',
+    exam: 'Online Exam',
     admissions: 'Admissions',
     ownerLogin: 'Owner Login',
     ownerStudio: 'Owner Studio',
@@ -235,13 +257,13 @@ const en: UIStrings = {
     ownerLoginDetails: 'Owner Login Details',
   },
   hero: {
-    tagline: 'École Primaire Saint Pierre Nkombo · Lake Kivu, Rwanda',
-    title: 'Rooted on Nkombo Island, nurturing curious minds for tomorrow.',
+    tagline: 'Learning today, leading tomorrow · Bugarura Cell, Nkombo Sector',
+    title: 'Learning today, leading tomorrow on Nkombo Island.',
     subtitle:
-      'EP Saint Pierre Nkombo provides Nursery and Primary 1–6 education grounded in multilingual literacy, hands-on lakeside environmental science, and strong community stewardship in Rusizi District.',
+      'EP Saint Pierre Nkombo provides Nursery and Primary 1–6 education grounded in multilingual literacy, hands-on lakeside environmental science, digital & P6 exam readiness, and community partnership in Bugarura Cell, Rusizi District.',
     ctaVisit: 'Schedule a Campus Visit',
     ctaCurriculum: 'Explore Curriculum',
-    historyNote: 'Nkombo Sector · Rusizi District · Western Province · Serving Island Families Since 1964',
+    historyNote: 'Bugarura Cell · Nkombo Sector · Rusizi District · Serving Island Families Since 1964',
     figCaption: 'Fig. 1 — Main stone courtyard and classroom wing overlooking Lake Kivu, Nkombo Island',
     gradesLabel: 'Grades Served',
     gradesSub: 'Ages 4 to 12',
@@ -418,6 +440,25 @@ const en: UIStrings = {
     signOutBtn: 'Sign Out',
     openStudioBtn: 'Open Owner Control Studio',
   },
+  files: {
+    kicker: 'Forms, Booklists & Circulars',
+    heading: 'School Documents & Downloads',
+    intro:
+      'Download official registration forms, annual booklists, academic calendars, and family circulars published by the school administration.',
+    uploadBtn: 'Upload File',
+    filterAll: 'All Files',
+    catForms: 'Forms & Admissions',
+    catCurriculum: 'Curriculum & Booklists',
+    catCirculars: 'Circulars & Notices',
+    catReports: 'Reports & Policies',
+    catMedia: 'Media & Resources',
+    downloadBtn: 'Download',
+    downloadedLabel: 'Downloaded',
+    externalLinkLabel: 'Open Link',
+    loading: 'Loading school documents...',
+    empty: 'No school files have been published in this category yet.',
+    emptyHint: 'Sign in as school owner to upload forms, PDFs, photos, or resource links.',
+  },
 };
 
 const rw: UIStrings = {
@@ -431,6 +472,8 @@ const rw: UIStrings = {
     faculty: 'Abarimu',
     testimonials: 'Ubuhamya',
     calendar: 'Kalendari',
+    documents: 'Inyandiko',
+    exam: 'Ikizamini kuri Interineti',
     admissions: 'Kwiyandikisha',
     ownerLogin: 'Kwinjira kw’Umuyobozi',
     ownerStudio: 'Studio y’Umuyobozi',
@@ -438,13 +481,13 @@ const rw: UIStrings = {
     ownerLoginDetails: 'Ibisobanuro byo Kwinjira',
   },
   hero: {
-    tagline: 'Ishuri Ribanza rya Saint Pierre Nkombo · Ikiyaga cya Kivu, Rwanda',
-    title: 'Dushingiye ku kirwa cya Nkombo, dukuza abanyeshuri bafite amatsiko n’ubumenyi.',
+    tagline: 'Kwiga uyu munsi, kuyobora ejo · Akagari ka Bugarura, Umurenge wa Nkombo',
+    title: 'Kwiga uyu munsi, kuyobora ejo ku Kirwa cya Nkombo.',
     subtitle:
-      'EP Saint Pierre Nkombo itanga uburezi bw’Incuke n’Amashuri Abanza (P1–P6) bushingiye ku ndimi nyinshi, ubumenyi bw’ibidukikije ku nkengero z’ikiyaga cya Kivu, n’ubufatanye n’ababyeyi mu Karere ka Rusizi.',
+      'EP Saint Pierre Nkombo itanga uburezi bw’Incuke n’Amashuri Abanza (P1–P6) bushingiye ku ndimi nyinshi, ubumenyi bw’ibidukikije ku kiyaga cya Kivu, imyiteguro y’ikizamini cya P6 n’ubufatanye mu Kagari ka Bugarura, Akarere ka Rusizi.',
     ctaVisit: 'Saba Gusura Ikigo',
     ctaCurriculum: 'Reba Integanyanyigisho',
-    historyNote: 'Umurenge wa Nkombo · Akarere ka Rusizi · Intara y’Iburengerazuba · Kuva mu 1964',
+    historyNote: 'Akagari ka Bugarura · Umurenge wa Nkombo · Akarere ka Rusizi · Kuva mu 1964',
     figCaption: 'Ifoto ya 1 — Ikibuga cy’amabuye n’amashuri areba ku Kiyaga cya Kivu, Ikirwa cya Nkombo',
     gradesLabel: 'Ibyiciro Byigishwa',
     gradesSub: 'Imyaka 4 kugeza kuri 12',
@@ -621,6 +664,25 @@ const rw: UIStrings = {
     signOutBtn: 'Sohoka',
     openStudioBtn: 'Fungura Studio y’Umuyobozi',
   },
+  files: {
+    kicker: 'Impapuro, Ibitabo & Amatangazo',
+    heading: 'Inyandiko z’Ishuri & Gukuramo',
+    intro:
+      'Kuramo impapuro zo kwiyandikisha, urutonde rw’ibitabo by’umwaka, kalendari y’amasomo n’amatangazo y’ubuyobozi bw’ishuri.',
+    uploadBtn: 'Ohereza Dosiye',
+    filterAll: 'Dosiye Zose',
+    catForms: 'Impapuro & Kwiyandikisha',
+    catCurriculum: 'Integanyanyigisho & Ibitabo',
+    catCirculars: 'Amatangazo & Imbonerahamwe',
+    catReports: 'Raporo & Amategeko',
+    catMedia: 'Amafoto & Ibikoresho',
+    downloadBtn: 'Kuramo',
+    downloadedLabel: 'Byakuwemo',
+    externalLinkLabel: 'Fungura Ihuza',
+    loading: 'Gupakurura inyandiko z’ishuri...',
+    empty: 'Nta nyandiko irashyirwa muri iki cyiciro.',
+    emptyHint: 'Injira nk’umuyobozi kugira ngo wohereze impapuro cyangwa PDF.',
+  },
 };
 
 const fr: UIStrings = {
@@ -634,6 +696,8 @@ const fr: UIStrings = {
     faculty: 'Équipe',
     testimonials: 'Témoignages',
     calendar: 'Calendrier',
+    documents: 'Documents',
+    exam: 'Examen en ligne',
     admissions: 'Admissions',
     ownerLogin: 'Connexion Direction',
     ownerStudio: 'Studio Direction',
@@ -641,13 +705,13 @@ const fr: UIStrings = {
     ownerLoginDetails: 'Accès Direction',
   },
   hero: {
-    tagline: 'École Primaire Saint Pierre Nkombo · Lac Kivu, Rwanda',
-    title: 'Enracinés sur l’île de Nkombo, former des esprits curieux pour demain.',
+    tagline: 'Apprendre aujourd’hui, diriger demain · Cellule Bugarura, Secteur Nkombo',
+    title: 'Apprendre aujourd’hui, diriger demain sur l’île de Nkombo.',
     subtitle:
-      'L’EP Saint Pierre Nkombo dispense un enseignement maternel et primaire (P1–P6) fondé sur l’alphabétisation trilingue, les sciences environnementales au bord du lac et l’engagement communautaire dans le district de Rusizi.',
+      'L’EP Saint Pierre Nkombo dispense un enseignement maternel et primaire (P1–P6) fondé sur l’alphabétisation trilingue, les sciences environnementales au bord du lac, la préparation à l’examen national P6 et le partenariat communautaire dans le district de Rusizi.',
     ctaVisit: 'Planifier une visite',
     ctaCurriculum: 'Découvrir le programme',
-    historyNote: 'Secteur Nkombo · District de Rusizi · Province de l’Ouest · Au service des familles depuis 1964',
+    historyNote: 'Cellule Bugarura · Secteur Nkombo · District de Rusizi · Depuis 1964',
     figCaption: 'Fig. 1 — Cour principale en pierre et salles de classe surplombant le lac Kivu, île de Nkombo',
     gradesLabel: 'Niveaux enseignés',
     gradesSub: 'De 4 à 12 ans',
@@ -824,6 +888,25 @@ const fr: UIStrings = {
     signOutBtn: 'Se déconnecter',
     openStudioBtn: 'Ouvrir le Studio Direction',
   },
+  files: {
+    kicker: 'Formulaires, Manuels & Circulaires',
+    heading: 'Documents Scolaires & Téléchargements',
+    intro:
+      'Téléchargez les fiches d’inscription officielles, les listes de fournitures, le calendrier scolaire et les circulaires destinées aux familles.',
+    uploadBtn: 'Téléverser un fichier',
+    filterAll: 'Tous les fichiers',
+    catForms: 'Formulaires & Admissions',
+    catCurriculum: 'Programmes & Listes',
+    catCirculars: 'Circulaires & Avis',
+    catReports: 'Rapports & Règlements',
+    catMedia: 'Médias & Ressources',
+    downloadBtn: 'Télécharger',
+    downloadedLabel: 'Téléchargé',
+    externalLinkLabel: 'Ouvrir le lien',
+    loading: 'Chargement des documents scolaires...',
+    empty: 'Aucun document publié dans cette catégorie pour le moment.',
+    emptyHint: 'Connectez-vous en tant que direction pour publier des fichiers ou liens.',
+  },
 };
 
 const sw: UIStrings = {
@@ -837,6 +920,8 @@ const sw: UIStrings = {
     faculty: 'Walimu',
     testimonials: 'Ushuhuda',
     calendar: 'Kalenda',
+    documents: 'Nyaraka',
+    exam: 'Mtihani Mtandaoni',
     admissions: 'Usajili',
     ownerLogin: 'Ingia (Mmiliki)',
     ownerStudio: 'Studio ya Mmiliki',
@@ -1027,6 +1112,25 @@ const sw: UIStrings = {
     signOutBtn: 'Toka',
     openStudioBtn: 'Fungura Studio ya Mmiliki',
   },
+  files: {
+    kicker: 'Fomu, Orodha za Vitabu & Matangazo',
+    heading: 'Nyaraka za Shule & Upakuaji',
+    intro:
+      'Pakua fomu rasmi za usajili, orodha za vitabu vya mwaka, kalenda ya masomo na barua kwa wazazi zilizochapishwa na uongozi wa shule.',
+    uploadBtn: 'Pakia Faili',
+    filterAll: 'Faili Zote',
+    catForms: 'Fomu & Usajili',
+    catCurriculum: 'Mtaala & Vitabu',
+    catCirculars: 'Barua & Taarifa',
+    catReports: 'Ripoti & Kanuni',
+    catMedia: 'Picha & Nyenzo',
+    downloadBtn: 'Pakua',
+    downloadedLabel: 'Imepakuliwa',
+    externalLinkLabel: 'Fungua Kiungo',
+    loading: 'Inapakia nyaraka za shule...',
+    empty: 'Hakuna nyaraka zilizochapishwa katika kundi hili bado.',
+    emptyHint: 'Ingia kama mmiliki wa shule kupakia fomu au PDF.',
+  },
 };
 
 const de: UIStrings = {
@@ -1040,6 +1144,8 @@ const de: UIStrings = {
     faculty: 'Kollegium',
     testimonials: 'Stimmen',
     calendar: 'Kalender',
+    documents: 'Dokumente',
+    exam: 'Online-Prüfung',
     admissions: 'Anmeldung',
     ownerLogin: 'Schulleitung Login',
     ownerStudio: 'Leitungs-Studio',
@@ -1230,6 +1336,25 @@ const de: UIStrings = {
     signOutBtn: 'Abmelden',
     openStudioBtn: 'Leitungs-Studio öffnen',
   },
+  files: {
+    kicker: 'Formulare, Bücherlisten & Rundschreiben',
+    heading: 'Schuldokumente & Downloads',
+    intro:
+      'Laden Sie offizielle Anmeldeformulare, jährliche Bücherlisten, den Schulkalender und Elternbriefe der Schulleitung herunter.',
+    uploadBtn: 'Datei hochladen',
+    filterAll: 'Alle Dateien',
+    catForms: 'Formulare & Anmeldung',
+    catCurriculum: 'Lehrplan & Bücherlisten',
+    catCirculars: 'Rundschreiben & Hinweise',
+    catReports: 'Berichte & Richtlinien',
+    catMedia: 'Medien & Ressourcen',
+    downloadBtn: 'Herunterladen',
+    downloadedLabel: 'Heruntergeladen',
+    externalLinkLabel: 'Link öffnen',
+    loading: 'Schuldokumente werden geladen...',
+    empty: 'In dieser Kategorie wurden noch keine Dateien veröffentlicht.',
+    emptyHint: 'Als Schulleitung anmelden, um Dokumente oder PDFs hochzuladen.',
+  },
 };
 
 const es: UIStrings = {
@@ -1243,6 +1368,8 @@ const es: UIStrings = {
     faculty: 'Docentes',
     testimonials: 'Testimonios',
     calendar: 'Calendario',
+    documents: 'Documentos',
+    exam: 'Examen en línea',
     admissions: 'Admisiones',
     ownerLogin: 'Acceso Dirección',
     ownerStudio: 'Estudio Dirección',
@@ -1433,6 +1560,25 @@ const es: UIStrings = {
     signOutBtn: 'Cerrar sesión',
     openStudioBtn: 'Abrir Estudio de Dirección',
   },
+  files: {
+    kicker: 'Formularios, Libros y Circulares',
+    heading: 'Documentos Escolares y Descargas',
+    intro:
+      'Descargue formularios oficiales de matrícula, listas de libros, calendario académico y circulares publicadas por la dirección escolar.',
+    uploadBtn: 'Subir Archivo',
+    filterAll: 'Todos los archivos',
+    catForms: 'Formularios y Admisiones',
+    catCurriculum: 'Currículo y Libros',
+    catCirculars: 'Circulares y Avisos',
+    catReports: 'Informes y Normas',
+    catMedia: 'Medios y Recursos',
+    downloadBtn: 'Descargar',
+    downloadedLabel: 'Descargado',
+    externalLinkLabel: 'Abrir Enlace',
+    loading: 'Cargando documentos escolares...',
+    empty: 'Aún no hay archivos publicados en esta categoría.',
+    emptyHint: 'Inicie sesión como dirección para subir documentos o enlaces.',
+  },
 };
 
 const it: UIStrings = {
@@ -1446,6 +1592,8 @@ const it: UIStrings = {
     faculty: 'Docenti',
     testimonials: 'Testimonianze',
     calendar: 'Calendario',
+    documents: 'Documenti',
+    exam: 'Esame Online',
     admissions: 'Iscrizioni',
     ownerLogin: 'Accesso Direzione',
     ownerStudio: 'Studio Direzione',
@@ -1636,6 +1784,25 @@ const it: UIStrings = {
     signOutBtn: 'Esci',
     openStudioBtn: 'Apri Studio Direzione',
   },
+  files: {
+    kicker: 'Moduli, Libri e Circolari',
+    heading: 'Documenti Scolastici e Download',
+    intro:
+      'Scarica i moduli ufficiali di iscrizione, gli elenchi dei libri, il calendario scolastico e le circolari pubblicate dalla direzione.',
+    uploadBtn: 'Carica File',
+    filterAll: 'Tutti i file',
+    catForms: 'Moduli e Iscrizioni',
+    catCurriculum: 'Programmi e Libri',
+    catCirculars: 'Circolari e Avvisi',
+    catReports: 'Rapporti e Regolamenti',
+    catMedia: 'Media e Risorse',
+    downloadBtn: 'Scarica',
+    downloadedLabel: 'Scaricato',
+    externalLinkLabel: 'Apri Link',
+    loading: 'Caricamento documenti scolastici...',
+    empty: 'Nessun file pubblicato in questa categoria.',
+    emptyHint: 'Accedi come direzione per caricare documenti o collegamenti.',
+  },
 };
 
 const pt: UIStrings = {
@@ -1649,6 +1816,8 @@ const pt: UIStrings = {
     faculty: 'Docentes',
     testimonials: 'Testemunhos',
     calendar: 'Calendário',
+    documents: 'Documentos',
+    exam: 'Exame Online',
     admissions: 'Matrículas',
     ownerLogin: 'Acesso Direção',
     ownerStudio: 'Estúdio Direção',
@@ -1839,6 +2008,25 @@ const pt: UIStrings = {
     signOutBtn: 'Terminar sessão',
     openStudioBtn: 'Abrir Estúdio da Direção',
   },
+  files: {
+    kicker: 'Formulários, Listas e Circulares',
+    heading: 'Documentos Escolares e Transferências',
+    intro:
+      'Descarregue formulários oficiais de matrícula, listas de livros, o calendário letivo e circulares publicadas pela direção escolar.',
+    uploadBtn: 'Carregar Ficheiro',
+    filterAll: 'Todos os ficheiros',
+    catForms: 'Formulários e Matrículas',
+    catCurriculum: 'Currículo e Livros',
+    catCirculars: 'Circulares e Avisos',
+    catReports: 'Relatórios e Normas',
+    catMedia: 'Média e Recursos',
+    downloadBtn: 'Descarregar',
+    downloadedLabel: 'Descarregado',
+    externalLinkLabel: 'Abrir Ligação',
+    loading: 'A carregar documentos escolares...',
+    empty: 'Ainda não existem ficheiros publicados nesta categoria.',
+    emptyHint: 'Inicie sessão como direção para carregar documentos.',
+  },
 };
 
 const nl: UIStrings = {
@@ -1852,6 +2040,8 @@ const nl: UIStrings = {
     faculty: 'Team',
     testimonials: 'Ervaringen',
     calendar: 'Kalender',
+    documents: 'Documenten',
+    exam: 'Online Examen',
     admissions: 'Aanmelden',
     ownerLogin: 'Directie Login',
     ownerStudio: 'Directie Studio',
@@ -2042,6 +2232,25 @@ const nl: UIStrings = {
     signOutBtn: 'Uitloggen',
     openStudioBtn: 'Directie Studio openen',
   },
+  files: {
+    kicker: 'Formulieren, Boekenlijsten & Brieven',
+    heading: 'Schooldocumenten & Downloads',
+    intro:
+      'Download officiële inschrijfformulieren, jaarlijkse boekenlijsten, schoolkalenders en ouderbrieven van de schoolleiding.',
+    uploadBtn: 'Bestand uploaden',
+    filterAll: 'Alle bestanden',
+    catForms: 'Formulieren & Toelating',
+    catCurriculum: 'Lesprogramma & Boeken',
+    catCirculars: 'Brieven & Mededelingen',
+    catReports: 'Verslagen & Beleid',
+    catMedia: 'Media & Hulpmiddelen',
+    downloadBtn: 'Downloaden',
+    downloadedLabel: 'Gedownload',
+    externalLinkLabel: 'Link openen',
+    loading: 'Schooldocumenten laden...',
+    empty: 'Nog geen bestanden gepubliceerd in deze categorie.',
+    emptyHint: 'Meld u aan als schooleigenaar om documenten te uploaden.',
+  },
 };
 
 const pl: UIStrings = {
@@ -2055,6 +2264,8 @@ const pl: UIStrings = {
     faculty: 'Kadra',
     testimonials: 'Opinie',
     calendar: 'Kalendarz',
+    documents: 'Dokumenty',
+    exam: 'Egzamin Online',
     admissions: 'Zapisy',
     ownerLogin: 'Logowanie Dyrekcji',
     ownerStudio: 'Panel Dyrekcji',
@@ -2245,6 +2456,25 @@ const pl: UIStrings = {
     signOutBtn: 'Wyloguj',
     openStudioBtn: 'Otwórz Panel Dyrekcji',
   },
+  files: {
+    kicker: 'Formularze, Podręczniki i Okólniki',
+    heading: 'Dokumenty Szkolne i Pliki do Pobrania',
+    intro:
+      'Pobierz oficjalne formularze zgłoszeniowe, wykazy podręczników, kalendarz roku szkolnego i komunikaty dyrekcji.',
+    uploadBtn: 'Prześlij plik',
+    filterAll: 'Wszystkie pliki',
+    catForms: 'Formularze i Zapisy',
+    catCurriculum: 'Program i Podręczniki',
+    catCirculars: 'Okólniki i Ogłoszenia',
+    catReports: 'Raporty i Zasady',
+    catMedia: 'Media i Materiały',
+    downloadBtn: 'Pobierz',
+    downloadedLabel: 'Pobrano',
+    externalLinkLabel: 'Otwórz link',
+    loading: 'Ładowanie dokumentów szkolnych...',
+    empty: 'Brak opublikowanych plików w tej kategorii.',
+    emptyHint: 'Zaloguj się jako dyrekcja, aby przesłać dokumenty.',
+  },
 };
 
 const sv: UIStrings = {
@@ -2258,6 +2488,8 @@ const sv: UIStrings = {
     faculty: 'Personal',
     testimonials: 'Röster',
     calendar: 'Kalender',
+    documents: 'Dokument',
+    exam: 'Onlineprov',
     admissions: 'Ansökan',
     ownerLogin: 'Ledningsinlogg',
     ownerStudio: 'Ledningsstudio',
@@ -2448,6 +2680,25 @@ const sv: UIStrings = {
     signOutBtn: 'Logga ut',
     openStudioBtn: 'Öppna Ledningsstudio',
   },
+  files: {
+    kicker: 'Blanketter, Boklistor & Brev',
+    heading: 'Skoldokument & Nedladdningar',
+    intro:
+      'Ladda ner officiella ansökningsblanketter, boklistor, läsårskalender och informationsbrev från skolledningen.',
+    uploadBtn: 'Ladda upp fil',
+    filterAll: 'Alla filer',
+    catForms: 'Blanketter & Ansökan',
+    catCurriculum: 'Läroplan & Boklistor',
+    catCirculars: 'Informationsbrev & Notiser',
+    catReports: 'Rapporter & Riktlinjer',
+    catMedia: 'Media & Resurser',
+    downloadBtn: 'Ladda ner',
+    downloadedLabel: 'Nedladdad',
+    externalLinkLabel: 'Öppna länk',
+    loading: 'Läser in skoldokument...',
+    empty: 'Inga filer har publicerats i denna kategori ännu.',
+    emptyHint: 'Logga in som skolägare för att ladda upp dokument.',
+  },
 };
 
 const el: UIStrings = {
@@ -2461,6 +2712,8 @@ const el: UIStrings = {
     faculty: 'Εκπαιδευτικοί',
     testimonials: 'Μαρτυρίες',
     calendar: 'Ημερολόγιο',
+    documents: 'Έγγραφα',
+    exam: 'Διαδικτυακή Εξέταση',
     admissions: 'Εγγραφές',
     ownerLogin: 'Είσοδος Διοίκησης',
     ownerStudio: 'Στούντιο Διοίκησης',
@@ -2650,6 +2903,25 @@ const el: UIStrings = {
     switchBtn: 'Αλλαγή λογαριασμού Google',
     signOutBtn: 'Αποσύνδεση',
     openStudioBtn: 'Άνοιγμα Στούντιο Διοίκησης',
+  },
+  files: {
+    kicker: 'Έντυπα, Βιβλία & Εγκύκλιοι',
+    heading: 'Σχολικά Έγγραφα & Λήψεις',
+    intro:
+      'Κατεβάστε επίσημες αιτήσεις εγγραφής, λίστες βιβλίων, το σχολικό ημερολόγιο και εγκυκλίους από τη διεύθυνση του σχολείου.',
+    uploadBtn: 'Μεταφόρτωση Αρχείου',
+    filterAll: 'Όλα τα αρχεία',
+    catForms: 'Έντυπα & Εγγραφές',
+    catCurriculum: 'Πρόγραμμα & Βιβλία',
+    catCirculars: 'Εγκύκλιοι & Ανακοινώσεις',
+    catReports: 'Εκθέσεις & Κανονισμοί',
+    catMedia: 'Πολυμέσα & Πόροι',
+    downloadBtn: 'Λήψη',
+    downloadedLabel: 'Έγινε λήψη',
+    externalLinkLabel: 'Άνοιγμα Συνδέσμου',
+    loading: 'Φόρτωση σχολικών εγγράφων...',
+    empty: 'Δεν έχουν δημοσιευτεί αρχεία σε αυτή την κατηγορία ακόμη.',
+    emptyHint: 'Συνδεθείτε ως ιδιοκτήτης για να μεταφορτώσετε έγγραφα.',
   },
 };
 

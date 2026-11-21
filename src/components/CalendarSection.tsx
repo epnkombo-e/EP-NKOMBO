@@ -64,14 +64,17 @@ export function CalendarSection() {
   };
 
   return (
-    <section id="calendar" className="border-b border-[#E5DFD3] bg-[#F3EFE7]/45 py-16 sm:py-24">
+    <section
+      id="calendar"
+      className="border-b border-[#D4DFEB] bg-[#EDF4FA]/50 py-16 dark:border-[#1E334D] dark:bg-[#0B1728]/70 sm:py-24"
+    >
       <div className="mx-auto max-w-[1280px] px-5 sm:px-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div className="max-w-2xl">
-            <p className="text-xs font-medium tracking-wider text-[#57534E]">
+            <p className="text-xs font-semibold tracking-wider text-[#1769AA] dark:text-[#60A5FA] uppercase">
               {t.calendar.kicker}
             </p>
-            <h2 className="mt-3 font-display text-3xl font-medium tracking-tight text-[#1C1917] sm:text-4xl [text-wrap:balance]">
+            <h2 className="mt-3 font-display text-3xl font-medium tracking-tight text-[#0B2E50] dark:text-[#EAF1F8] sm:text-4xl [text-wrap:balance]">
               {t.calendar.heading}
             </h2>
           </div>
@@ -79,7 +82,7 @@ export function CalendarSection() {
           <div
             role="tablist"
             aria-label="Filter calendar events"
-            className="flex flex-wrap gap-1.5 rounded-lg border border-[#E5DFD3] bg-[#F3EFE7] p-1.5"
+            className="flex flex-wrap gap-1.5 rounded-lg border border-[#D4DFEB] bg-[#FFFFFF] p-1.5 dark:border-[#1E334D] dark:bg-[#0D1B2D]"
           >
             {CATEGORIES.map((cat) => {
               const isSelected = category === cat;
@@ -90,10 +93,10 @@ export function CalendarSection() {
                   aria-selected={isSelected}
                   type="button"
                   onClick={() => setCategory(cat)}
-                  className={`min-h-[40px] rounded-md px-3.5 py-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14532D] ${
+                  className={`min-h-[40px] rounded-md px-3.5 py-2 text-xs font-medium transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1769AA] ${
                     isSelected
-                      ? 'bg-[#FFFFFF] text-[#14532D] shadow-xs'
-                      : 'text-[#57534E] hover:text-[#1C1917]'
+                      ? 'bg-[#123D68] text-white shadow-xs dark:bg-[#1769AA]'
+                      : 'text-[#334155] hover:text-[#0B2E50] dark:text-[#CBD5E1] dark:hover:text-white'
                   }`}
                 >
                   {cat === 'All Notices' ? t.calendar.filterAll : localizeCategory(cat)}
@@ -104,34 +107,34 @@ export function CalendarSection() {
         </div>
 
         <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <div className="divide-y divide-[#E5DFD3] rounded-xl border border-[#E5DFD3] bg-[#FFFFFF] lg:col-span-7">
+          <div className="divide-y divide-[#D4DFEB] rounded-xl border border-[#D4DFEB] bg-[#FFFFFF] dark:divide-[#1E334D] dark:border-[#1E334D] dark:bg-[#0D1B2D] lg:col-span-7">
             {filteredEvents.map((ev) => (
               <article
                 key={ev.id}
                 className="flex flex-col gap-4 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6"
               >
                 <div className="flex items-start gap-4">
-                  <div className="flex w-14 shrink-0 flex-col items-center rounded-lg border border-[#E5DFD3] bg-[#FBF9F5] py-2 text-center">
-                    <span className="font-mono text-[11px] font-medium text-[#14532D]">
+                  <div className="flex w-14 shrink-0 flex-col items-center rounded-lg border border-[#CBD8E6] bg-[#F8FAFD] py-2 text-center dark:border-[#1E334D] dark:bg-[#13253D]">
+                    <span className="font-mono text-[11px] font-medium text-[#1769AA] dark:text-[#60A5FA]">
                       {ev.monthLabel}
                     </span>
-                    <span className="font-display text-xl font-semibold text-[#1C1917] tabular-figures">
+                    <span className="font-display text-xl font-semibold text-[#0B2E50] dark:text-[#EAF1F8] tabular-figures">
                       {ev.dayNumber}
                     </span>
                   </div>
 
                   <div>
-                    <p className="text-xs text-[#57534E] tabular-figures">
-                      <span className="font-medium text-[#14532D]">{localizeCategory(ev.category)}</span>
+                    <p className="text-xs text-[#475569] dark:text-[#94A3B8] tabular-figures">
+                      <span className="font-medium text-[#1769AA] dark:text-[#60A5FA]">{localizeCategory(ev.category)}</span>
                       <span aria-hidden="true"> · </span>
                       <span>{ev.timeRange}</span>
                       <span aria-hidden="true"> · </span>
                       <span>{ev.location}</span>
                     </p>
-                    <h3 className="mt-1 font-display text-lg font-medium text-[#1C1917]">
+                    <h3 className="mt-1 font-display text-lg font-medium text-[#0B2E50] dark:text-[#EAF1F8]">
                       {ev.title}
                     </h3>
-                    <p className="mt-1.5 text-sm leading-relaxed text-[#44403C]">
+                    <p className="mt-1.5 text-sm leading-relaxed text-[#334155] dark:text-[#CBD5E1]">
                       {ev.description}
                     </p>
                   </div>
@@ -141,7 +144,7 @@ export function CalendarSection() {
                   <button
                     type="button"
                     onClick={() => handleDownload(ev)}
-                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-md border border-[#E5DFD3] bg-[#FBF9F5] px-3 py-2 text-xs font-medium text-[#1C1917] transition-colors duration-150 hover:border-[#14532D] hover:text-[#14532D] whitespace-nowrap cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#14532D]"
+                    className="inline-flex min-h-[40px] items-center gap-1.5 rounded-md border border-[#CBD8E6] bg-[#F8FAFD] px-3 py-2 text-xs font-medium text-[#0B2E50] transition-colors duration-150 hover:border-[#1769AA] hover:text-[#1769AA] dark:border-[#1E334D] dark:bg-[#13253D] dark:text-[#E7EFF8] dark:hover:border-[#60A5FA] whitespace-nowrap cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#1769AA]"
                   >
                     <CalendarPlus className="h-3.5 w-3.5" aria-hidden="true" />
                     <span>{savedNoticeId === ev.id ? t.calendar.savedIcs : t.calendar.addToCalendar}</span>
@@ -151,18 +154,18 @@ export function CalendarSection() {
             ))}
           </div>
 
-          <div className="flex flex-col justify-between rounded-xl border border-[#E5DFD3] bg-[#FFFFFF] p-6 lg:col-span-5">
+          <div className="flex flex-col justify-between rounded-xl border border-[#D4DFEB] bg-[#FFFFFF] p-6 dark:border-[#1E334D] dark:bg-[#0D1B2D] lg:col-span-5">
             <div>
-              <div className="flex items-center justify-between border-b border-[#E5DFD3] pb-4">
+              <div className="flex items-center justify-between border-b border-[#D4DFEB] pb-4 dark:border-[#1E334D]">
                 <div>
-                  <h3 className="font-display text-xl font-medium text-[#1C1917]">
+                  <h3 className="font-display text-xl font-medium text-[#0B2E50] dark:text-[#EAF1F8]">
                     {t.calendar.bellTitle}
                   </h3>
-                  <p className="mt-1 text-xs text-[#57534E]">
+                  <p className="mt-1 text-xs text-[#475569] dark:text-[#94A3B8]">
                     {t.calendar.bellSubtitle}
                   </p>
                 </div>
-                <Clock className="h-5 w-5 text-[#14532D]" aria-hidden="true" />
+                <Clock className="h-5 w-5 text-[#1769AA] dark:text-[#60A5FA]" aria-hidden="true" />
               </div>
 
               <div className="mt-2 overflow-x-auto">
@@ -173,15 +176,15 @@ export function CalendarSection() {
                       <th>Activity</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-[#E5DFD3]">
+                  <tbody className="divide-y divide-[#D4DFEB] dark:divide-[#1E334D]">
                     {dailySchedule.map((row) => (
                       <tr key={row.id}>
-                        <td className="py-3 pr-4 align-top font-mono text-xs font-medium text-[#14532D] whitespace-nowrap tabular-figures">
+                        <td className="py-3 pr-4 align-top font-mono text-xs font-medium text-[#1769AA] dark:text-[#60A5FA] whitespace-nowrap tabular-figures">
                           {row.time}
                         </td>
                         <td className="py-3 align-top">
-                          <p className="text-sm font-medium text-[#1C1917]">{row.activity}</p>
-                          <p className="text-xs text-[#57534E]">{row.notes}</p>
+                          <p className="text-sm font-medium text-[#0B2E50] dark:text-[#EAF1F8]">{row.activity}</p>
+                          <p className="text-xs text-[#475569] dark:text-[#94A3B8]">{row.notes}</p>
                         </td>
                       </tr>
                     ))}
@@ -190,11 +193,11 @@ export function CalendarSection() {
               </div>
             </div>
 
-            <p className="mt-5 border-t border-[#E5DFD3] pt-4 text-xs leading-relaxed text-[#57534E]">
+            <p className="mt-5 border-t border-[#D4DFEB] pt-4 text-xs leading-relaxed text-[#475569] dark:border-[#1E334D] dark:text-[#94A3B8]">
               {t.calendar.bellNoteBefore}{' '}
-              <span className="font-mono text-[#1C1917] tabular-figures">07:00</span>{' '}
+              <span className="font-mono text-[#0B2E50] dark:text-[#E7EFF8] tabular-figures">07:00</span>{' '}
               {t.calendar.bellNoteMiddle}{' '}
-              <span className="font-mono text-[#1C1917] tabular-figures">12:30</span>
+              <span className="font-mono text-[#0B2E50] dark:text-[#E7EFF8] tabular-figures">12:30</span>
               {t.calendar.bellNoteAfter}
             </p>
           </div>
