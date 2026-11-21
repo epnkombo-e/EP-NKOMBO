@@ -1,0 +1,8 @@
+{
+  "name": "EP Saint Pierre Nkombo",
+  "description": "Official school website for École Primaire Saint Pierre Nkombo on Nkombo Island, Lake Kivu — primary education, academic programs, school calendar, faculty directory, and admissions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

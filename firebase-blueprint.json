@@ -1,0 +1,323 @@
+{
+  "entities": {
+    "SchoolSettings": {
+      "title": "SchoolSettings",
+      "description": "Core institutional profile, hero copy, contact details, and operational metrics for EP Saint Pierre Nkombo.",
+      "type": "object",
+      "properties": {
+        "schoolName": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "tagline": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "locationLabel": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "heroTitle": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "heroSubtitle": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "gradesServed": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "languages": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "schoolHours": { "type": "string", "minLength": 3, "maxLength": 80 },
+        "contactEmail": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "campusAddress": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "officeHours": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "historyNote": { "type": "string", "minLength": 3, "maxLength": 200 },
+        "plePassRate": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "updatedBy": { "type": "string", "minLength": 3, "maxLength": 120 }
+      },
+      "required": [
+        "schoolName",
+        "tagline",
+        "locationLabel",
+        "heroTitle",
+        "heroSubtitle",
+        "gradesServed",
+        "languages",
+        "schoolHours",
+        "contactEmail",
+        "campusAddress",
+        "officeHours",
+        "historyNote",
+        "plePassRate",
+        "updatedAt",
+        "updatedBy"
+      ]
+    },
+    "Post": {
+      "title": "Post",
+      "description": "Website news article, official announcement, or community update published by the school owner.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 160 },
+        "category": {
+          "type": "string",
+          "enum": ["Announcements", "Academics", "Community & Events", "Achievements"]
+        },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 320 },
+        "body": { "type": "string", "minLength": 10, "maxLength": 5000 },
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "authorEmail": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "published": { "type": "boolean" },
+        "pinned": { "type": "boolean" },
+        "imageUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "category",
+        "summary",
+        "body",
+        "authorName",
+        "authorEmail",
+        "published",
+        "pinned",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AcademicDivision": {
+      "title": "AcademicDivision",
+      "description": "Primary school curriculum division with weekly hours, subjects, and milestones.",
+      "type": "object",
+      "properties": {
+        "order": { "type": "integer" },
+        "label": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "grades": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "ageRange": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "headline": { "type": "string", "minLength": 5, "maxLength": 160 },
+        "summary": { "type": "string", "minLength": 10, "maxLength": 800 },
+        "image": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "imageAlt": { "type": "string", "minLength": 5, "maxLength": 240 },
+        "figureCaption": { "type": "string", "minLength": 5, "maxLength": 200 },
+        "weeklyHours": { "type": "number" },
+        "classSize": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "subjects": { "type": "array" },
+        "milestones": { "type": "array" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "order",
+        "label",
+        "grades",
+        "ageRange",
+        "headline",
+        "summary",
+        "image",
+        "imageAlt",
+        "figureCaption",
+        "weeklyHours",
+        "classSize",
+        "subjects",
+        "milestones",
+        "updatedAt"
+      ]
+    },
+    "CampusSpace": {
+      "title": "CampusSpace",
+      "description": "Physical campus learning space or facility on Nkombo Island.",
+      "type": "object",
+      "properties": {
+        "order": { "type": "integer" },
+        "indexLabel": { "type": "string", "minLength": 3, "maxLength": 80 },
+        "title": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "subtitle": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 800 },
+        "highlights": { "type": "array" },
+        "image": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "imageAlt": { "type": "string", "minLength": 5, "maxLength": 240 },
+        "figureNumber": { "type": "string", "minLength": 2, "maxLength": 20 },
+        "featured": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "order",
+        "indexLabel",
+        "title",
+        "subtitle",
+        "description",
+        "highlights",
+        "image",
+        "imageAlt",
+        "figureNumber",
+        "featured",
+        "updatedAt"
+      ]
+    },
+    "FacultyMember": {
+      "title": "FacultyMember",
+      "description": "Teacher or school administrator profile displayed in the directory.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "initials": { "type": "string", "minLength": 1, "maxLength": 4 },
+        "role": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "department": {
+          "type": "string",
+          "enum": ["Administration", "Lower Primary", "Upper Primary & STEM"]
+        },
+        "subjects": { "type": "string", "minLength": 2, "maxLength": 140 },
+        "yearsAtSchool": { "type": "integer" },
+        "bio": { "type": "string", "minLength": 10, "maxLength": 600 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "initials", "role", "department", "subjects", "yearsAtSchool", "bio", "updatedAt"]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Scheduled school term date, parent meeting, or athletics event.",
+      "type": "object",
+      "properties": {
+        "dateISO": { "type": "string", "minLength": 8, "maxLength": 32 },
+        "displayDate": { "type": "string", "minLength": 4, "maxLength": 40 },
+        "monthLabel": { "type": "string", "minLength": 2, "maxLength": 10 },
+        "dayNumber": { "type": "string", "minLength": 1, "maxLength": 4 },
+        "timeRange": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "category": {
+          "type": "string",
+          "enum": ["Academic Dates", "Parent Meetings", "Athletics & Clubs"]
+        },
+        "title": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "location": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "description": { "type": "string", "minLength": 5, "maxLength": 600 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "dateISO",
+        "displayDate",
+        "monthLabel",
+        "dayNumber",
+        "timeRange",
+        "category",
+        "title",
+        "location",
+        "description",
+        "updatedAt"
+      ]
+    },
+    "DailyScheduleSlot": {
+      "title": "DailyScheduleSlot",
+      "description": "Monday to Friday daily bell schedule row.",
+      "type": "object",
+      "properties": {
+        "order": { "type": "integer" },
+        "time": { "type": "string", "minLength": 3, "maxLength": 40 },
+        "activity": { "type": "string", "minLength": 3, "maxLength": 140 },
+        "notes": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["order", "time", "activity", "notes", "updatedAt"]
+    },
+    "AdmissionsInquiry": {
+      "title": "AdmissionsInquiry",
+      "description": "Parent or guardian admissions inquiry containing PII; readable and manageable only by authorized school owners.",
+      "type": "object",
+      "properties": {
+        "referenceCode": { "type": "string", "minLength": 6, "maxLength": 32 },
+        "parentName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "contact": { "type": "string", "minLength": 6, "maxLength": 120 },
+        "gradeLevel": { "type": "string", "minLength": 2, "maxLength": 60 },
+        "inquiryType": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "message": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "status": {
+          "type": "string",
+          "enum": ["new", "reviewed", "scheduled", "archived"]
+        },
+        "ownerNotes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "referenceCode",
+        "parentName",
+        "contact",
+        "gradeLevel",
+        "inquiryType",
+        "message",
+        "status",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminEmail": {
+      "title": "AdminEmail",
+      "description": "Authorized co-administrator email granted access by the primary school owner.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "label": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "addedBy": { "type": "string", "minLength": 5, "maxLength": 120 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["email", "label", "addedBy", "createdAt"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Parent or student quote reflecting lived experience at EP Saint Pierre Nkombo.",
+      "type": "object",
+      "properties": {
+        "authorName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "roleLabel": { "type": "string", "minLength": 3, "maxLength": 120 },
+        "voiceType": {
+          "type": "string",
+          "enum": ["Parent", "Student"]
+        },
+        "gradeContext": { "type": "string", "minLength": 2, "maxLength": 80 },
+        "quote": { "type": "string", "minLength": 15, "maxLength": 800 },
+        "featured": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "authorName",
+        "roleLabel",
+        "voiceType",
+        "gradeContext",
+        "quote",
+        "featured",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/schoolSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/SchoolSettings" },
+      "description": "School-wide profile settings and operational metrics."
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "#/entities/Post" },
+      "description": "School news posts and official announcements."
+    },
+    "/academics/{divisionId}": {
+      "schema": { "$ref": "#/entities/AcademicDivision" },
+      "description": "Academic curriculum divisions."
+    },
+    "/campusSpaces/{spaceId}": {
+      "schema": { "$ref": "#/entities/CampusSpace" },
+      "description": "Campus facility showcases."
+    },
+    "/faculty/{memberId}": {
+      "schema": { "$ref": "#/entities/FacultyMember" },
+      "description": "Faculty and leadership directory."
+    },
+    "/calendarEvents/{eventId}": {
+      "schema": { "$ref": "#/entities/CalendarEvent" },
+      "description": "School calendar events."
+    },
+    "/dailySchedule/{slotId}": {
+      "schema": { "$ref": "#/entities/DailyScheduleSlot" },
+      "description": "Daily bell schedule entries."
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": { "$ref": "#/entities/AdmissionsInquiry" },
+      "description": "Parent admissions inquiries (PII restricted to owner/admins)."
+    },
+    "/adminEmails/{emailId}": {
+      "schema": { "$ref": "#/entities/AdminEmail" },
+      "description": "Co-administrator email access list controlled by primary school owner."
+    },
+    "/testimonials/{testimonialId}": {
+      "schema": { "$ref": "#/entities/Testimonial" },
+      "description": "Published parent and student testimonials managed by school owner/admins."
+    }
+  }
+}

@@ -1,0 +1,353 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: deny everything by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core identity & validation primitives
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function userEmailLower() {
+      return request.auth.token.email.lower();
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidEmailId(emailId) {
+      return emailId is string && emailId.size() >= 5 && emailId.size() <= 128 && emailId.matches('^[^/]+@[^/]+\\.[^/]+$');
+    }
+
+    function isPrimaryOwner() {
+      return isSignedIn() && request.auth.token.email is string && userEmailLower() == 'epnkombo@gmail.com';
+    }
+
+    function isAdmin() {
+      return isPrimaryOwner() || (
+        isSignedIn() &&
+        request.auth.token.email is string &&
+        exists(/databases/$(database)/documents/adminEmails/$(userEmailLower()))
+      );
+    }
+
+    function isValidString(val, minLen, maxLen) {
+      return val is string && val.size() >= minLen && val.size() <= maxLen;
+    }
+
+    function isValidSchoolSettings(data) {
+      return data.keys().hasAll([
+        'schoolName', 'tagline', 'locationLabel', 'heroTitle', 'heroSubtitle',
+        'gradesServed', 'languages', 'schoolHours', 'contactEmail', 'campusAddress',
+        'officeHours', 'historyNote', 'plePassRate', 'updatedAt', 'updatedBy'
+      ]) &&
+      data.keys().hasOnly([
+        'schoolName', 'tagline', 'locationLabel', 'heroTitle', 'heroSubtitle',
+        'gradesServed', 'languages', 'schoolHours', 'contactEmail', 'campusAddress',
+        'officeHours', 'historyNote', 'plePassRate', 'updatedAt', 'updatedBy'
+      ]) &&
+      isValidString(data.schoolName, 3, 120) &&
+      isValidString(data.tagline, 3, 160) &&
+      isValidString(data.locationLabel, 3, 140) &&
+      isValidString(data.heroTitle, 5, 200) &&
+      isValidString(data.heroSubtitle, 10, 600) &&
+      isValidString(data.gradesServed, 2, 80) &&
+      isValidString(data.languages, 2, 120) &&
+      isValidString(data.schoolHours, 3, 80) &&
+      isValidString(data.contactEmail, 5, 120) &&
+      isValidString(data.campusAddress, 3, 160) &&
+      isValidString(data.officeHours, 3, 120) &&
+      isValidString(data.historyNote, 3, 200) &&
+      isValidString(data.plePassRate, 2, 20) &&
+      isValidString(data.updatedBy, 3, 120) &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll([
+        'title', 'category', 'summary', 'body', 'authorName', 'authorEmail',
+        'published', 'pinned', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'category', 'summary', 'body', 'authorName', 'authorEmail',
+        'published', 'pinned', 'imageUrl', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidString(data.title, 3, 160) &&
+      data.category in ['Announcements', 'Academics', 'Community & Events', 'Achievements'] &&
+      isValidString(data.summary, 10, 320) &&
+      isValidString(data.body, 10, 5000) &&
+      isValidString(data.authorName, 2, 100) &&
+      isValidString(data.authorEmail, 5, 120) &&
+      data.published is bool &&
+      data.pinned is bool &&
+      (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 500)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidAcademicDivision(data) {
+      return data.keys().hasAll([
+        'order', 'label', 'grades', 'ageRange', 'headline', 'summary',
+        'image', 'imageAlt', 'figureCaption', 'weeklyHours', 'classSize',
+        'subjects', 'milestones', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'order', 'label', 'grades', 'ageRange', 'headline', 'summary',
+        'image', 'imageAlt', 'figureCaption', 'weeklyHours', 'classSize',
+        'subjects', 'milestones', 'updatedAt'
+      ]) &&
+      data.order is int &&
+      isValidString(data.label, 2, 80) &&
+      isValidString(data.grades, 2, 80) &&
+      isValidString(data.ageRange, 2, 60) &&
+      isValidString(data.headline, 5, 160) &&
+      isValidString(data.summary, 10, 800) &&
+      isValidString(data.image, 1, 500) &&
+      isValidString(data.imageAlt, 5, 240) &&
+      isValidString(data.figureCaption, 5, 200) &&
+      data.weeklyHours is number && data.weeklyHours >= 1 && data.weeklyHours <= 60 &&
+      isValidString(data.classSize, 2, 60) &&
+      data.subjects is list && data.subjects.size() >= 1 && data.subjects.size() <= 10 &&
+      data.subjects[0] is map &&
+      data.milestones is list && data.milestones.size() >= 1 && data.milestones.size() <= 8 &&
+      data.milestones[0] is string &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidCampusSpace(data) {
+      return data.keys().hasAll([
+        'order', 'indexLabel', 'title', 'subtitle', 'description',
+        'highlights', 'image', 'imageAlt', 'figureNumber', 'featured', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'order', 'indexLabel', 'title', 'subtitle', 'description',
+        'highlights', 'image', 'imageAlt', 'figureNumber', 'featured', 'updatedAt'
+      ]) &&
+      data.order is int &&
+      isValidString(data.indexLabel, 3, 80) &&
+      isValidString(data.title, 3, 120) &&
+      isValidString(data.subtitle, 2, 80) &&
+      isValidString(data.description, 10, 800) &&
+      data.highlights is list && data.highlights.size() >= 1 && data.highlights.size() <= 8 &&
+      data.highlights[0] is string &&
+      isValidString(data.image, 1, 500) &&
+      isValidString(data.imageAlt, 5, 240) &&
+      isValidString(data.figureNumber, 2, 20) &&
+      data.featured is bool &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidFacultyMember(data) {
+      return data.keys().hasAll([
+        'name', 'initials', 'role', 'department', 'subjects', 'yearsAtSchool', 'bio', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'initials', 'role', 'department', 'subjects', 'yearsAtSchool', 'bio', 'updatedAt'
+      ]) &&
+      isValidString(data.name, 2, 100) &&
+      isValidString(data.initials, 1, 4) &&
+      isValidString(data.role, 2, 100) &&
+      data.department in ['Administration', 'Lower Primary', 'Upper Primary & STEM'] &&
+      isValidString(data.subjects, 2, 140) &&
+      data.yearsAtSchool is int && data.yearsAtSchool >= 0 && data.yearsAtSchool <= 70 &&
+      isValidString(data.bio, 10, 600) &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidCalendarEvent(data) {
+      return data.keys().hasAll([
+        'dateISO', 'displayDate', 'monthLabel', 'dayNumber', 'timeRange',
+        'category', 'title', 'location', 'description', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'dateISO', 'displayDate', 'monthLabel', 'dayNumber', 'timeRange',
+        'category', 'title', 'location', 'description', 'updatedAt'
+      ]) &&
+      isValidString(data.dateISO, 8, 32) &&
+      isValidString(data.displayDate, 4, 40) &&
+      isValidString(data.monthLabel, 2, 10) &&
+      isValidString(data.dayNumber, 1, 4) &&
+      isValidString(data.timeRange, 3, 40) &&
+      data.category in ['Academic Dates', 'Parent Meetings', 'Athletics & Clubs'] &&
+      isValidString(data.title, 3, 140) &&
+      isValidString(data.location, 2, 120) &&
+      isValidString(data.description, 5, 600) &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidDailyScheduleSlot(data) {
+      return data.keys().hasAll(['order', 'time', 'activity', 'notes', 'updatedAt']) &&
+      data.keys().hasOnly(['order', 'time', 'activity', 'notes', 'updatedAt']) &&
+      data.order is int &&
+      isValidString(data.time, 3, 40) &&
+      isValidString(data.activity, 3, 140) &&
+      isValidString(data.notes, 2, 120) &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidInquiry(data) {
+      return data.keys().hasAll([
+        'referenceCode', 'parentName', 'contact', 'gradeLevel', 'inquiryType',
+        'message', 'status', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'referenceCode', 'parentName', 'contact', 'gradeLevel', 'inquiryType',
+        'message', 'status', 'ownerNotes', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidString(data.referenceCode, 6, 32) &&
+      isValidString(data.parentName, 2, 100) &&
+      isValidString(data.contact, 6, 120) &&
+      isValidString(data.gradeLevel, 2, 60) &&
+      isValidString(data.inquiryType, 2, 80) &&
+      isValidString(data.message, 10, 2000) &&
+      data.status in ['new', 'reviewed', 'scheduled', 'archived'] &&
+      (!('ownerNotes' in data) || (data.ownerNotes is string && data.ownerNotes.size() <= 1000)) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    function isValidAdminEmail(data) {
+      return data.keys().hasAll(['email', 'label', 'addedBy', 'createdAt']) &&
+      data.keys().hasOnly(['email', 'label', 'addedBy', 'createdAt']) &&
+      isValidString(data.email, 5, 120) &&
+      isValidString(data.label, 2, 100) &&
+      isValidString(data.addedBy, 5, 120) &&
+      data.createdAt is timestamp &&
+      data.createdAt == request.time;
+    }
+
+    function isValidTestimonial(data) {
+      return data.keys().hasAll([
+        'authorName', 'roleLabel', 'voiceType', 'gradeContext',
+        'quote', 'featured', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'authorName', 'roleLabel', 'voiceType', 'gradeContext',
+        'quote', 'featured', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidString(data.authorName, 2, 100) &&
+      isValidString(data.roleLabel, 3, 120) &&
+      data.voiceType in ['Parent', 'Student'] &&
+      isValidString(data.gradeContext, 2, 80) &&
+      isValidString(data.quote, 15, 800) &&
+      data.featured is bool &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp &&
+      data.updatedAt == request.time;
+    }
+
+    // 1. School Settings (Public read, Admin write)
+    match /schoolSettings/{settingId} {
+      allow get: if isValidId(settingId);
+      allow list: if true;
+      allow create, update: if isValidId(settingId) && isAdmin() && isValidSchoolSettings(incoming());
+      allow delete: if isValidId(settingId) && isAdmin();
+    }
+
+    // 2. Website Posts / Announcements (Published public read, all posts Admin read/write)
+    match /posts/{postId} {
+      allow get: if isValidId(postId) && (existing().published == true || isAdmin());
+      allow list: if resource.data.published == true || isAdmin();
+      allow create: if isValidId(postId) && isAdmin() && isValidPost(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(postId) && isAdmin() && isValidPost(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(postId) && isAdmin();
+    }
+
+    // 3. Academic Divisions (Public read, Admin write)
+    match /academics/{divisionId} {
+      allow get: if isValidId(divisionId);
+      allow list: if true;
+      allow create, update: if isValidId(divisionId) && isAdmin() && isValidAcademicDivision(incoming());
+      allow delete: if isValidId(divisionId) && isAdmin();
+    }
+
+    // 4. Campus Spaces (Public read, Admin write)
+    match /campusSpaces/{spaceId} {
+      allow get: if isValidId(spaceId);
+      allow list: if true;
+      allow create, update: if isValidId(spaceId) && isAdmin() && isValidCampusSpace(incoming());
+      allow delete: if isValidId(spaceId) && isAdmin();
+    }
+
+    // 5. Faculty Directory (Public read, Admin write)
+    match /faculty/{memberId} {
+      allow get: if isValidId(memberId);
+      allow list: if true;
+      allow create, update: if isValidId(memberId) && isAdmin() && isValidFacultyMember(incoming());
+      allow delete: if isValidId(memberId) && isAdmin();
+    }
+
+    // 6. Calendar Events (Public read, Admin write)
+    match /calendarEvents/{eventId} {
+      allow get: if isValidId(eventId);
+      allow list: if true;
+      allow create, update: if isValidId(eventId) && isAdmin() && isValidCalendarEvent(incoming());
+      allow delete: if isValidId(eventId) && isAdmin();
+    }
+
+    // 7. Daily Bell Schedule (Public read, Admin write)
+    match /dailySchedule/{slotId} {
+      allow get: if isValidId(slotId);
+      allow list: if true;
+      allow create, update: if isValidId(slotId) && isAdmin() && isValidDailyScheduleSlot(incoming());
+      allow delete: if isValidId(slotId) && isAdmin();
+    }
+
+    // 8. Admissions Inquiries (Public create only with status 'new'; PII read/update/delete strictly Admin)
+    match /inquiries/{inquiryId} {
+      allow get: if isValidId(inquiryId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(inquiryId)
+        && isValidInquiry(incoming())
+        && incoming().status == 'new'
+        && incoming().createdAt == request.time
+        && (!('ownerNotes' in incoming()) || incoming().ownerNotes == '');
+      allow update: if isValidId(inquiryId)
+        && isAdmin()
+        && isValidInquiry(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().referenceCode == existing().referenceCode
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'ownerNotes', 'updatedAt']);
+      allow delete: if isValidId(inquiryId) && isAdmin();
+    }
+
+    // 9. Co-Admin Emails (Primary owner only can read/write; verified signed-in user can check own doc)
+    match /adminEmails/{emailId} {
+      allow get: if isValidEmailId(emailId) && (isPrimaryOwner() || (isSignedIn() && userEmailLower() == emailId));
+      allow list: if isPrimaryOwner();
+      allow create: if isValidEmailId(emailId) && isPrimaryOwner() && isValidAdminEmail(incoming()) && incoming().email == emailId;
+      allow update: if false;
+      allow delete: if isValidEmailId(emailId) && isPrimaryOwner();
+    }
+
+    // 10. Parent & Student Testimonials (Published public read, all records Admin read/write)
+    match /testimonials/{testimonialId} {
+      allow get: if isValidId(testimonialId) && (existing().published == true || isAdmin());
+      allow list: if resource.data.published == true || isAdmin();
+      allow create: if isValidId(testimonialId) && isAdmin() && isValidTestimonial(incoming()) && incoming().createdAt == request.time;
+      allow update: if isValidId(testimonialId) && isAdmin() && isValidTestimonial(incoming()) && incoming().createdAt == existing().createdAt;
+      allow delete: if isValidId(testimonialId) && isAdmin();
+    }
+  }
+}
